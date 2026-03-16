@@ -119,36 +119,161 @@ export class Player {
 
   createWeaponModel() {
     const group = new THREE.Group();
-    // Simple weapon geometry
-    const blade = new THREE.Mesh(
-      new THREE.BoxGeometry(0.06, 0.5, 0.02),
-      new THREE.MeshStandardMaterial({ color: 0x8B7355, roughness: 0.6 })
-    );
-    blade.position.set(0, -0.1, 0);
-    const handle = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.02, 0.02, 0.25),
-      new THREE.MeshStandardMaterial({ color: 0x4a3520, roughness: 0.8 })
-    );
-    handle.position.set(0, -0.4, 0);
-    group.add(blade, handle);
     group.position.set(0.35, -0.35, -0.5);
     group.rotation.z = -0.3;
     this.weaponMesh = group;
     this.game.camera.add(group);
+    this.buildWeaponGeometry();
+  }
+
+  buildWeaponGeometry() {
+    while (this.weaponMesh.children.length) this.weaponMesh.remove(this.weaponMesh.children[0]);
+    const w = this.weapon;
+    const std = (color, metal = 0, rough = 0.6) =>
+      new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough });
+    const glow = (color, emissive, intensity = 0.3) =>
+      new THREE.MeshStandardMaterial({ color, metalness: 0.7, roughness: 0.3, emissive, emissiveIntensity: intensity });
+    const add = (geo, mat, pos, rot) => {
+      const m = new THREE.Mesh(geo, mat);
+      if (pos) m.position.set(...pos);
+      if (rot) m.rotation.set(...rot);
+      this.weaponMesh.add(m);
+      return m;
+    };
+
+    switch (w.id) {
+      case 'paddle': {
+        // Flat wooden paddle blade with rounded top
+        add(new THREE.BoxGeometry(0.08, 0.3, 0.015), std(0x8B7355), [0, -0.05, 0]);
+        add(new THREE.CylinderGeometry(0.04, 0.04, 0.015, 8), std(0x8B7355), [0, 0.1, 0], [Math.PI / 2, 0, 0]);
+        // Handle
+        add(new THREE.CylinderGeometry(0.015, 0.02, 0.28, 6), std(0x5C3A1E), [0, -0.34, 0]);
+        // Grip wrap
+        add(new THREE.CylinderGeometry(0.022, 0.022, 0.08, 6), std(0x333333), [0, -0.42, 0]);
+        break;
+      }
+      case 'kitchen_knife': {
+        // Triangular blade
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0); shape.lineTo(0.035, -0.22); shape.lineTo(-0.005, -0.25); shape.lineTo(-0.005, 0);
+        add(new THREE.ExtrudeGeometry(shape, { depth: 0.004, bevelEnabled: false }), std(0xCCCCCC, 0.8, 0.2), [0, 0, -0.002]);
+        // Guard
+        add(new THREE.BoxGeometry(0.05, 0.012, 0.014), std(0x888888, 0.5), [0, 0.01, 0]);
+        // Handle with rivets
+        add(new THREE.BoxGeometry(0.028, 0.13, 0.016), std(0x1a0a00), [0, 0.08, 0]);
+        for (const dy of [0.04, 0.1]) add(new THREE.SphereGeometry(0.004, 4, 4), std(0x999999), [0, dy, 0.01]);
+        break;
+      }
+      case 'bolo': {
+        // Curved machete blade
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0);
+        shape.quadraticCurveTo(0.06, -0.12, 0.045, -0.28);
+        shape.lineTo(0.01, -0.31);
+        shape.quadraticCurveTo(0.02, -0.12, -0.005, 0);
+        add(new THREE.ExtrudeGeometry(shape, { depth: 0.006, bevelEnabled: false }), std(0x999999, 0.7, 0.35), [0, 0, -0.003]);
+        // Handle
+        add(new THREE.CylinderGeometry(0.02, 0.018, 0.15, 6), std(0x4a3520), [0, 0.08, 0]);
+        add(new THREE.SphereGeometry(0.022, 5, 4), std(0x3a2510), [0, 0.16, 0]);
+        // Wrap
+        for (let i = 0; i < 3; i++) add(new THREE.TorusGeometry(0.021, 0.003, 4, 6), std(0x222222), [0, 0.03 + i * 0.04, 0], [Math.PI / 2, 0, 0]);
+        break;
+      }
+      case 'sumpak': {
+        // Improvised shotgun - barrel
+        add(new THREE.CylinderGeometry(0.02, 0.025, 0.4, 6), std(0x555555, 0.6, 0.4), [0, 0, -0.2], [Math.PI / 2, 0, 0]);
+        // Muzzle
+        add(new THREE.RingGeometry(0.012, 0.022, 6), std(0x333333, 0.5), [0, 0, -0.4]);
+        // Stock
+        add(new THREE.BoxGeometry(0.04, 0.06, 0.2), std(0x5C3A1E), [0, -0.02, 0.1]);
+        // Grip
+        const grip = add(new THREE.BoxGeometry(0.03, 0.1, 0.04), std(0x4a3520), [0, -0.06, 0.05]);
+        grip.rotation.x = 0.3;
+        // Duct tape
+        add(new THREE.CylinderGeometry(0.027, 0.027, 0.04, 6), std(0x777777), [0, 0, -0.05], [Math.PI / 2, 0, 0]);
+        // Trigger guard
+        add(new THREE.TorusGeometry(0.02, 0.003, 4, 6), std(0x666666, 0.4), [0, -0.035, 0], [0, 0, 0]);
+        break;
+      }
+      case 'reinforced_paddle': {
+        add(new THREE.BoxGeometry(0.08, 0.3, 0.015), std(0x8B7355), [0, -0.05, 0]);
+        // Metal plate
+        add(new THREE.BoxGeometry(0.068, 0.2, 0.005), std(0x999999, 0.6), [0, -0.05, 0.01]);
+        // Corner bolts
+        for (const [bx, by] of [[-0.025, 0.03], [0.025, 0.03], [-0.025, -0.12], [0.025, -0.12]])
+          add(new THREE.SphereGeometry(0.005, 4, 4), std(0x666666, 0.5), [bx, by, 0.015]);
+        add(new THREE.CylinderGeometry(0.015, 0.02, 0.28, 6), std(0x5C3A1E), [0, -0.34, 0]);
+        add(new THREE.CylinderGeometry(0.022, 0.022, 0.08, 6), std(0x333333), [0, -0.42, 0]);
+        break;
+      }
+      case 'spiked_bat': {
+        // Thick bat body
+        add(new THREE.CylinderGeometry(0.035, 0.02, 0.4, 7), std(0x6B4226), [0, -0.1, 0]);
+        add(new THREE.CylinderGeometry(0.024, 0.024, 0.12, 6), std(0x222222), [0, -0.36, 0]);
+        // Protruding nail spikes
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const h = -0.15 + (i % 3) * 0.07;
+          const spike = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.01, 0.06), std(0xAAAAAA, 0.7, 0.3));
+          spike.position.set(Math.cos(angle) * 0.04, h, Math.sin(angle) * 0.04);
+          spike.lookAt(new THREE.Vector3(Math.cos(angle) * 0.15, h, Math.sin(angle) * 0.15));
+          this.weaponMesh.add(spike);
+        }
+        break;
+      }
+      case 'electro_blade': {
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0); shape.quadraticCurveTo(0.06, -0.12, 0.045, -0.28);
+        shape.lineTo(0.01, -0.31); shape.quadraticCurveTo(0.02, -0.12, -0.005, 0);
+        add(new THREE.ExtrudeGeometry(shape, { depth: 0.006, bevelEnabled: false }),
+          glow(0x4488FF, 0x1144aa, 0.4), [0, 0, -0.003]);
+        // Wire wrapping
+        for (let i = 0; i < 3; i++)
+          add(new THREE.TorusGeometry(0.025, 0.003, 4, 8), std(0xAAAACC, 0.5), [0, -0.06 - i * 0.07, 0], [Math.PI / 2, 0, 0]);
+        add(new THREE.CylinderGeometry(0.02, 0.018, 0.15, 6), std(0x4a3520), [0, 0.08, 0]);
+        // Electric glow
+        add(new THREE.SphereGeometry(0.12, 6, 4), new THREE.MeshBasicMaterial({ color: 0x2244ff, transparent: true, opacity: 0.08 }), [0, -0.1, 0]);
+        break;
+      }
+      case 'poison_blade': {
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0); shape.quadraticCurveTo(0.06, -0.12, 0.045, -0.28);
+        shape.lineTo(0.01, -0.31); shape.quadraticCurveTo(0.02, -0.12, -0.005, 0);
+        add(new THREE.ExtrudeGeometry(shape, { depth: 0.006, bevelEnabled: false }),
+          glow(0x44AA44, 0x225522, 0.25), [0, 0, -0.003]);
+        // Dripping poison
+        for (let i = 0; i < 4; i++)
+          add(new THREE.SphereGeometry(0.006 + i * 0.001, 4, 4),
+            new THREE.MeshBasicMaterial({ color: 0x33ff33, transparent: true, opacity: 0.5 }),
+            [0.04 - i * 0.01, -0.08 - i * 0.06, 0.005]);
+        add(new THREE.CylinderGeometry(0.02, 0.018, 0.15, 6), std(0x4a3520), [0, 0.08, 0]);
+        break;
+      }
+      case 'enchanted_bolo': {
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0); shape.quadraticCurveTo(0.06, -0.12, 0.045, -0.28);
+        shape.lineTo(0.01, -0.31); shape.quadraticCurveTo(0.02, -0.12, -0.005, 0);
+        add(new THREE.ExtrudeGeometry(shape, { depth: 0.006, bevelEnabled: false }),
+          glow(0xBB77FF, 0x6633aa, 0.5), [0, 0, -0.003]);
+        // Ethereal aura
+        add(new THREE.SphereGeometry(0.14, 6, 4),
+          new THREE.MeshBasicMaterial({ color: 0x8844ff, transparent: true, opacity: 0.1 }), [0, -0.1, 0]);
+        // Ornate handle with rune glow
+        add(new THREE.CylinderGeometry(0.022, 0.018, 0.15, 6), glow(0x3a2510, 0x442288, 0.15), [0, 0.08, 0]);
+        add(new THREE.SphereGeometry(0.025, 6, 4), glow(0x9966FF, 0x6633CC, 0.4), [0, 0.16, 0]);
+        break;
+      }
+      default: {
+        add(new THREE.BoxGeometry(0.06, 0.4, 0.02), std(0x8B7355), [0, -0.1, 0]);
+        add(new THREE.CylinderGeometry(0.02, 0.02, 0.25, 6), std(0x4a3520), [0, -0.38, 0]);
+        break;
+      }
+    }
   }
 
   updateWeaponModel() {
     if (!this.weaponMesh) return;
-    const w = this.weapon;
-    const mat = this.weaponMesh.children[0].material;
-    const colors = {
-      paddle: 0x8B7355, kitchen_knife: 0xC0C0C0, bolo: 0x888888,
-      reinforced_paddle: 0x999999, spiked_bat: 0x884422,
-      electro_blade: 0x4488FF, poison_blade: 0x44AA44,
-      enchanted_bolo: 0xAA66FF,
-      pipe: 0x666666, bat: 0x6B4226, sumpak: 0x4a3520
-    };
-    mat.color.setHex(colors[w.id] || 0x8B7355);
+    this.buildWeaponGeometry();
   }
 
   update(dt) {

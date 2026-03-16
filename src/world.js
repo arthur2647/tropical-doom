@@ -534,16 +534,33 @@ export function updateEnvironment(game, dt) {
     pos.needsUpdate = true;
   }
 
+  // --- Palm tree sway ---
+  if (game.palmTrees) {
+    const windT = t * 0.6;
+    const playerPos = game.camera.position;
+    // Wind intensifies during rain
+    const windMult = game.weather && game.weather.rainActive ? 2.5 : 1.0;
+    for (const palm of game.palmTrees) {
+      const dx = palm.userData.baseX - playerPos.x;
+      const dz = palm.userData.baseZ - playerPos.z;
+      if (dx * dx + dz * dz > 6400) continue; // 80 unit radius
+      const sway = Math.sin(windT + palm.userData.swayOffset) * 0.015 * windMult;
+      const sway2 = Math.cos(windT * 0.7 + palm.userData.swayOffset * 1.3) * 0.01 * windMult;
+      palm.rotation.z = sway;
+      palm.rotation.x = sway2;
+    }
+  }
+
   // --- Bush sway ---
   if (game.bushes) {
     const windT = t * 0.8;
     const playerPos = game.camera.position;
+    const bushWindMult = game.weather && game.weather.rainActive ? 2.0 : 1.0;
     for (const bush of game.bushes) {
-      // Only animate bushes near the player for performance
       const dx = bush.userData.baseX - playerPos.x;
       const dz = bush.userData.baseZ - playerPos.z;
-      if (dx * dx + dz * dz > 3600) continue; // 60 unit radius
-      const sway = Math.sin(windT + bush.userData.swayOffset) * bush.userData.swayAmt;
+      if (dx * dx + dz * dz > 3600) continue;
+      const sway = Math.sin(windT + bush.userData.swayOffset) * bush.userData.swayAmt * bushWindMult;
       bush.position.x = bush.userData.baseX + sway;
       bush.rotation.z = sway * 0.5;
     }
@@ -666,40 +683,96 @@ function addCylinder(game, x, y, z, rTop, rBot, h, color, opts = {}) {
 function createPalmTree(game, x, z, height = 8) {
   const group = new THREE.Group();
   const groundY = getTerrainHeightFast(x, z);
-  const lean = (Math.random() - 0.5) * 2;
+  const lean = (Math.random() - 0.5) * 1.5;
+  const leanDir = Math.random() * Math.PI * 2;
 
-  // Simplified trunk - 2 segments instead of 5
-  const trunkMat = getMat(0x6B4226);
-  for (let i = 0; i < 2; i++) {
-    const t = i / 2;
-    const segH = height / 2;
-    const r = 0.15 * (1 - t * 0.5);
-    const seg = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.8, r, segH, 5), trunkMat);
-    seg.position.set(lean * t * t, groundY + segH * i + segH / 2, 0);
-    seg.rotation.z = lean * 0.03 * (i + 1);
+  // --- Curved trunk with bark rings ---
+  const segments = 5;
+  const trunkMat = getMat(0x7B5B3A);
+  const darkBark = getMat(0x4A2F16);
+  for (let i = 0; i < segments; i++) {
+    const t = i / segments;
+    const nextT = (i + 1) / segments;
+    const segH = height / segments;
+    const rBot = 0.18 * (1 - t * 0.55);
+    const rTop = 0.18 * (1 - nextT * 0.55);
+    const curveAmt = lean * t * t;
+    const cx = Math.cos(leanDir) * curveAmt;
+    const cz = Math.sin(leanDir) * curveAmt;
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, segH, 7), trunkMat);
+    seg.position.set(cx, groundY + segH * i + segH / 2, cz);
+    seg.rotation.z = Math.cos(leanDir) * lean * 0.025 * (i + 1);
+    seg.rotation.x = Math.sin(leanDir) * lean * 0.025 * (i + 1);
     group.add(seg);
+    // Bark ring between segments
+    if (i > 0) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(rBot + 0.01, 0.012, 4, 8), darkBark);
+      ring.position.set(cx, groundY + segH * i, cz);
+      ring.rotation.x = Math.PI / 2;
+      group.add(ring);
+    }
   }
 
-  // Fronds - 5 instead of 7, simpler geometry
-  const topX = lean;
+  // Crown position
+  const topCurve = lean;
+  const topX = Math.cos(leanDir) * topCurve;
+  const topZ = Math.sin(leanDir) * topCurve;
   const topY = groundY + height;
-  const frondMat = getMat(0x228B22);
-  for (let i = 0; i < 5; i++) {
-    const angle = (i / 5) * Math.PI * 2 + Math.random() * 0.3;
-    const frondLen = 3 + Math.random() * 1.5;
-    const frond = new THREE.Mesh(new THREE.PlaneGeometry(0.8, frondLen), frondMat);
-    frond.position.set(
-      topX + Math.cos(angle) * frondLen * 0.35,
-      topY - 0.5 - Math.random() * 0.6,
-      Math.sin(angle) * frondLen * 0.35
-    );
+
+  // --- Tapered fronds with natural droop ---
+  const frondColors = [0x1E8C1E, 0x228B22, 0x2A9A2A, 0x1F7F1F, 0x267326];
+  const frondCount = 7;
+  for (let i = 0; i < frondCount; i++) {
+    const angle = (i / frondCount) * Math.PI * 2 + Math.random() * 0.4;
+    const frondLen = 3 + Math.random() * 2;
+    const droop = 0.3 + Math.random() * 0.5;
+    // Tapered frond with vertex-modified droop
+    const frondGeo = new THREE.PlaneGeometry(0.7, frondLen, 1, 4);
+    const fv = frondGeo.attributes.position;
+    for (let j = 0; j < fv.count; j++) {
+      const fy = fv.getY(j);
+      const norm = (fy + frondLen / 2) / frondLen; // 0 at base, 1 at tip
+      // Taper width toward tip
+      fv.setX(j, fv.getX(j) * (1 - norm * 0.75));
+      // Droop curve
+      fv.setZ(j, fv.getZ(j) - norm * norm * droop * frondLen);
+    }
+    frondGeo.computeVertexNormals();
+    const frondMat = new THREE.MeshLambertMaterial({
+      color: frondColors[i % frondColors.length], side: THREE.DoubleSide
+    });
+    const frond = new THREE.Mesh(frondGeo, frondMat);
+    frond.position.set(topX, topY + 0.1, topZ);
     frond.rotation.y = angle;
-    frond.rotation.z = 0.4 + Math.random() * 0.3;
-    frond.material.side = THREE.DoubleSide;
+    frond.rotation.z = 0.15 + Math.random() * 0.15;
     group.add(frond);
   }
 
+  // --- Coconut cluster ---
+  const coconutMat = getMat(0x5C4033);
+  const coconutCount = 1 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < coconutCount; i++) {
+    const ca = (i / coconutCount) * Math.PI * 2 + Math.random() * 0.5;
+    const coconut = new THREE.Mesh(new THREE.SphereGeometry(0.1, 5, 4), coconutMat);
+    coconut.position.set(topX + Math.cos(ca) * 0.2, topY - 0.35, topZ + Math.sin(ca) * 0.2);
+    coconut.scale.y = 1.3;
+    group.add(coconut);
+  }
+
+  // --- Crown tuft (where fronds meet trunk) ---
+  const tuft = new THREE.Mesh(
+    new THREE.SphereGeometry(0.25, 5, 4),
+    new THREE.MeshLambertMaterial({ color: 0x2D6B1A })
+  );
+  tuft.position.set(topX, topY + 0.05, topZ);
+  tuft.scale.y = 0.5;
+  group.add(tuft);
+
   group.position.set(x, 0, z);
+  group.userData.baseX = x;
+  group.userData.baseZ = z;
+  group.userData.swayOffset = Math.random() * Math.PI * 2;
+  group.userData.height = height;
   game.scene.add(group);
 
   const trunkBox = new THREE.Box3(
@@ -984,6 +1057,7 @@ function buildCove(game) {
 
 // --- SCATTER ---
 function scatterPalmTrees(game, count) {
+  game.palmTrees = [];
   for (let i = 0; i < count; i++) {
     const x = (Math.random() - 0.5) * 260;
     const z = (Math.random() - 0.5) * 260;
@@ -991,6 +1065,11 @@ function scatterPalmTrees(game, count) {
     if (dist > 130) continue;
     if (Math.abs(x) < 8 && Math.abs(z) < 8) continue;
     createPalmTree(game, x, z, 6 + Math.random() * 5);
+    // Store last added group for sway
+    const lastChild = game.scene.children[game.scene.children.length - 1];
+    if (lastChild && lastChild.userData.baseX !== undefined) {
+      game.palmTrees.push(lastChild);
+    }
   }
 }
 
@@ -1000,14 +1079,52 @@ function scatterJungleTrees(game, count) {
     const z = 50 + (Math.random() - 0.5) * 70;
     const gy = getTerrainHeightFast(x, z);
     const h = 8 + Math.random() * 6;
-    addCylinder(game, x, gy + h / 2, z, 0.2, 0.4, h, 0x3D2B1F);
-    const canopy = new THREE.Mesh(
-      new THREE.SphereGeometry(2 + Math.random() * 1.5, 5, 4),
-      getMat(0x1A5A1A)
-    );
-    canopy.position.set(x, gy + h, z);
-    canopy.scale.y = 0.6;
-    game.scene.add(canopy);
+    // Gnarled trunk with slight taper
+    addCylinder(game, x, gy + h / 2, z, 0.15, 0.35, h, 0x3D2B1F);
+    // Root buttresses
+    for (let r = 0; r < 3; r++) {
+      const ra = (r / 3) * Math.PI * 2 + Math.random() * 0.5;
+      const root = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, 1.2, 0.5),
+        getMat(0x3D2B1F)
+      );
+      root.position.set(x + Math.cos(ra) * 0.3, gy + 0.5, z + Math.sin(ra) * 0.3);
+      root.rotation.y = ra;
+      root.rotation.z = 0.2;
+      game.scene.add(root);
+    }
+    // Multi-layered canopy
+    const canopyColors = [0x1A5A1A, 0x1F6B1F, 0x174E17, 0x226622];
+    for (let c = 0; c < 3; c++) {
+      const cr = 1.8 + Math.random() * 2;
+      const canopy = new THREE.Mesh(
+        new THREE.SphereGeometry(cr, 6, 4),
+        getMat(canopyColors[c % canopyColors.length])
+      );
+      canopy.position.set(
+        x + (Math.random() - 0.5) * 1.5,
+        gy + h - 0.5 + c * 0.8,
+        z + (Math.random() - 0.5) * 1.5
+      );
+      canopy.scale.y = 0.45 + Math.random() * 0.15;
+      game.scene.add(canopy);
+    }
+    // Hanging vines (a few thin cylinders)
+    if (Math.random() > 0.5) {
+      for (let v = 0; v < 2; v++) {
+        const va = Math.random() * Math.PI * 2;
+        const vine = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.01, 0.01, 3 + Math.random() * 2, 3),
+          getMat(0x2D5A1A)
+        );
+        vine.position.set(
+          x + Math.cos(va) * 1.5,
+          gy + h - 2,
+          z + Math.sin(va) * 1.5
+        );
+        game.scene.add(vine);
+      }
+    }
   }
 }
 

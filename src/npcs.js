@@ -200,57 +200,317 @@ const NPC_DEFS = {
 function createNPCModel(def) {
   const group = new THREE.Group();
   const mL = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const mS = (c, m = 0, r = 0.6) => new THREE.MeshStandardMaterial({ color: c, metalness: m, roughness: r });
+  const skin = 0xC8956C; // Filipino skin tone
 
-  // Body
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.25), mL(def.color));
-  body.position.y = 0.9;
-  body.castShadow = true;
-  group.add(body);
+  if (def === NPC_DEFS.maria) {
+    // Maria - Strong village leader, bolo fighter, practical clothing
+    // Torso - red/brown blouse, slightly broad-shouldered
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.22), mL(0xCC4433));
+    torso.position.y = 0.95; torso.castShadow = true;
+    group.add(torso);
+    // Collar detail
+    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.18), mL(0xDD5544));
+    collar.position.y = 1.22;
+    group.add(collar);
+    // Belt/sash
+    const sash = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.23), mL(0x664422));
+    sash.position.y = 0.72;
+    group.add(sash);
+    // Head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), mL(skin));
+    head.position.y = 1.35; head.scale.set(1, 1.1, 0.9);
+    group.add(head);
+    // Hair - tied back in a bun
+    const hairBack = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 8), mL(0x1a0a05));
+    hairBack.position.set(0, 1.38, -0.04); hairBack.scale.set(1, 0.8, 0.9);
+    group.add(hairBack);
+    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), mL(0x1a0a05));
+    bun.position.set(0, 1.4, -0.14);
+    group.add(bun);
+    // Eyes
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.025, 4, 4), mL(0x221100));
+      eye.position.set(side*0.05, 1.36, 0.13);
+      group.add(eye);
+    }
+    // Determined mouth
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.015, 0.01), mL(0x994444));
+    mouth.position.set(0, 1.28, 0.15);
+    group.add(mouth);
+    // Arms - skin with rolled sleeves
+    for (const side of [-1, 1]) {
+      const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.12, 0.1), mL(0xCC4433));
+      sleeve.position.set(side*0.27, 1.0, 0);
+      group.add(sleeve);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.28, 0.08), mL(skin));
+      arm.position.set(side*0.27, 0.78, 0);
+      arm.userData.isArm = true; arm.userData.side = side;
+      group.add(arm);
+    }
+    // Bolo in right hand - curved blade
+    const boloShape = new THREE.Shape();
+    boloShape.moveTo(0, 0); boloShape.lineTo(0.03, 0.15);
+    boloShape.quadraticCurveTo(0.05, 0.28, 0.02, 0.32);
+    boloShape.lineTo(-0.01, 0.3); boloShape.lineTo(0, 0.12); boloShape.lineTo(-0.01, 0);
+    const bolo = new THREE.Mesh(new THREE.ExtrudeGeometry(boloShape, { depth: 0.015, bevelEnabled: false }), mS(0xaaaaaa, 0.7, 0.3));
+    bolo.position.set(0.28, 0.45, 0.08); bolo.rotation.x = -0.3;
+    bolo.userData.isWeapon = true;
+    group.add(bolo);
+    const boloHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.018, 0.12, 6), mL(0x5a3a1a));
+    boloHandle.position.set(0.28, 0.45, 0.08);
+    group.add(boloHandle);
+    // Legs - dark pants
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.4, 0.12), mL(0x3a2a1a));
+      leg.position.set(side*0.1, 0.4, 0);
+      group.add(leg);
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.14), mL(0x443322));
+      foot.position.set(side*0.1, 0.02, 0.02);
+      group.add(foot);
+    }
 
-  // Head
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), mL(0xDEB887));
-  head.position.y = 1.35;
-  group.add(head);
-
-  // Hair
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.19, 8, 8), mL(0x1a1a1a));
-  hair.position.y = 1.4;
-  hair.scale.set(1, 0.7, 1);
-  group.add(hair);
-
-  // Arms (tagged for animation)
-  for (const side of [-1, 1]) {
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.1), mL(0xDEB887));
-    arm.position.set(side * 0.28, 0.85, 0);
-    arm.userData.isArm = true;
-    arm.userData.side = side;
-    group.add(arm);
-  }
-
-  // Weapon in right hand
-  if (def.combatStyle === 'melee') {
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.35, 0.06), mL(0xaaaaaa));
-    blade.position.set(0.28, 0.55, 0.1);
-    blade.rotation.x = -0.3;
-    blade.userData.isWeapon = true;
-    group.add(blade);
-  } else if (def.combatStyle === 'healer') {
-    // Staff
-    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 6), mL(0x886633));
-    staff.position.set(0.28, 0.65, 0.05);
+  } else if (def === NPC_DEFS.tomas) {
+    // Tomas - Elderly healer, hunched, white hair, staff with herbs
+    // Torso - loose tunic, slightly hunched
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.45, 0.2), mL(0x888866));
+    torso.position.y = 0.88; torso.rotation.x = 0.1; torso.castShadow = true;
+    group.add(torso);
+    // Herb pouch on belt
+    const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 0.1), mL(0x6B5B3A));
+    pouch.position.set(0.15, 0.7, 0.08);
+    group.add(pouch);
+    // Head - old, thin face
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), mL(skin));
+    head.position.set(0, 1.28, 0.05); head.scale.set(0.9, 1.1, 0.85);
+    group.add(head);
+    // White/grey hair - thin, wispy
+    for (let i = 0; i < 6; i++) {
+      const strand = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.06, 0.01), mL(0xccccbb));
+      strand.position.set((i-2.5)*0.035, 1.35, -0.06);
+      strand.rotation.x = 0.3;
+      group.add(strand);
+    }
+    // Wrinkled brow
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, 0.05), mL(0xB08060));
+    brow.position.set(0, 1.33, 0.1);
+    group.add(brow);
+    // Squinting eyes
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.01, 0.01), mL(0x221100));
+      eye.position.set(side*0.045, 1.3, 0.12);
+      group.add(eye);
+    }
+    // Thin beard
+    for (let i = 0; i < 4; i++) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.04 + Math.random()*0.02, 0.008), mL(0xbbbbaa));
+      b.position.set((i-1.5)*0.025, 1.2, 0.13);
+      group.add(b);
+    }
+    // Arms - thin, weathered
+    for (const side of [-1, 1]) {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.08), mL(skin));
+      arm.position.set(side*0.24, 0.78, 0.03);
+      arm.userData.isArm = true; arm.userData.side = side;
+      group.add(arm);
+    }
+    // Gnarled walking staff with herb bundle
+    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.8, 6), mL(0x6B5030));
+    staff.position.set(0.26, 0.6, 0.06);
     staff.userData.isWeapon = true;
     group.add(staff);
-    // Staff glow
-    const orb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), new THREE.MeshBasicMaterial({ color: 0x44ff44 }));
-    orb.position.set(0.28, 0.98, 0.05);
-    group.add(orb);
-  }
+    // Staff knots
+    for (let i = 0; i < 2; i++) {
+      const knot = new THREE.Mesh(new THREE.SphereGeometry(0.025, 4, 4), mL(0x5a4020));
+      knot.position.set(0.26, 0.7 + i*0.25, 0.06);
+      group.add(knot);
+    }
+    // Herb bundle at staff top
+    const herbs = new THREE.Mesh(new THREE.SphereGeometry(0.04, 4, 4), mL(0x44aa33));
+    herbs.position.set(0.26, 1.02, 0.06);
+    group.add(herbs);
+    const herbGlow = new THREE.Mesh(new THREE.SphereGeometry(0.055, 4, 4),
+      new THREE.MeshBasicMaterial({ color: 0x44ff44, transparent: true, opacity: 0.2 }));
+    herbGlow.position.copy(herbs.position);
+    group.add(herbGlow);
+    // Legs - thin, sandals
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.38, 0.1), mL(0x5a4a30));
+      leg.position.set(side*0.09, 0.38, 0);
+      group.add(leg);
+      const sandal = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.14), mL(0x6B5030));
+      sandal.position.set(side*0.09, 0.02, 0.02);
+      group.add(sandal);
+    }
 
-  // Legs
-  for (const side of [-1, 1]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.35, 0.12), mL(0x4a3520));
-    leg.position.set(side * 0.1, 0.4, 0);
-    group.add(leg);
+  } else if (def === NPC_DEFS.pedro) {
+    // Pedro - Tough fisherman, muscular, tank top, bandana
+    // Torso - sleeveless, muscular
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.5, 0.25), mL(skin));
+    torso.position.y = 0.92; torso.castShadow = true;
+    group.add(torso);
+    // Tank top
+    const tank = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.42, 0.22), mL(0x4477AA));
+    tank.position.y = 0.94;
+    group.add(tank);
+    // Tank straps
+    for (const side of [-1, 1]) {
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.15, 0.02), mL(0x4477AA));
+      strap.position.set(side*0.1, 1.2, 0.1);
+      group.add(strap);
+    }
+    // Head - square jaw, rugged
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 8), mL(skin));
+    head.position.y = 1.35; head.scale.set(1, 1.05, 0.9);
+    group.add(head);
+    // Bandana
+    const bandana = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.06, 0.18), mL(0xCC3333));
+    bandana.position.y = 1.42;
+    group.add(bandana);
+    // Bandana tail
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.12, 0.02), mL(0xCC3333));
+    tail.position.set(0.12, 1.36, -0.12);
+    tail.rotation.z = 0.3;
+    group.add(tail);
+    // Short cropped hair under bandana
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 4), mL(0x1a1a1a));
+    hair.position.y = 1.4; hair.scale.set(1, 0.5, 0.9);
+    group.add(hair);
+    // Stubble jaw
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.1), mL(0xA07858));
+    jaw.position.set(0, 1.25, 0.08);
+    group.add(jaw);
+    // Eyes - tough squint
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 4), mL(0x221100));
+      eye.position.set(side*0.055, 1.36, 0.14);
+      group.add(eye);
+    }
+    // Scar on cheek
+    const scar = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.06, 0.01), mL(0xAA8070));
+    scar.position.set(0.1, 1.32, 0.14);
+    scar.rotation.z = 0.3;
+    group.add(scar);
+    // Muscular arms
+    for (const side of [-1, 1]) {
+      const upper = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.18, 0.12), mL(skin));
+      upper.position.set(side*0.3, 0.98, 0);
+      group.add(upper);
+      const fore = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.22, 0.1), mL(skin));
+      fore.position.set(side*0.3, 0.75, 0);
+      fore.userData.isArm = true; fore.userData.side = side;
+      group.add(fore);
+    }
+    // Improvised weapon - heavy paddle/oar
+    const oarHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.018, 0.5, 6), mL(0x7a5a30));
+    oarHandle.position.set(0.3, 0.55, 0.1); oarHandle.rotation.x = -0.2;
+    oarHandle.userData.isWeapon = true;
+    group.add(oarHandle);
+    const oarBlade = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.02), mL(0x8a6a40));
+    oarBlade.position.set(0.3, 0.35, 0.12);
+    group.add(oarBlade);
+    // Legs - cargo shorts
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.25, 0.13), mL(0x5a5a44));
+      leg.position.set(side*0.11, 0.48, 0);
+      group.add(leg);
+      const shin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.1), mL(skin));
+      shin.position.set(side*0.11, 0.27, 0);
+      group.add(shin);
+      const sandal = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.14), mL(0x554433));
+      sandal.position.set(side*0.11, 0.02, 0.02);
+      group.add(sandal);
+    }
+
+  } else if (def === NPC_DEFS.lena) {
+    // Lena - Resort manager, business casual but disheveled, scared posture
+    // Torso - blouse, slightly hunched from fear
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.45, 0.2), mL(0xDDAA88));
+    torso.position.y = 0.9; torso.rotation.x = 0.08; torso.castShadow = true;
+    group.add(torso);
+    // Collar/neckline
+    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.03, 0.12), mL(0xEEBB99));
+    collar.position.y = 1.14;
+    group.add(collar);
+    // Name tag (small rectangle)
+    const tag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.03, 0.01), mL(0xffffff));
+    tag.position.set(-0.1, 1.0, 0.11);
+    group.add(tag);
+    // Head - softer features
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), mL(skin));
+    head.position.set(0, 1.3, 0.03); head.scale.set(0.95, 1.1, 0.9);
+    group.add(head);
+    // Hair - shoulder-length, slightly messy
+    const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), mL(0x2a1a0a));
+    hairTop.position.set(0, 1.35, -0.01); hairTop.scale.set(1, 0.75, 0.95);
+    group.add(hairTop);
+    // Hair sides falling to shoulders
+    for (const side of [-1, 1]) {
+      const strand = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.18, 0.04), mL(0x2a1a0a));
+      strand.position.set(side*0.13, 1.2, -0.02);
+      group.add(strand);
+    }
+    // Worried eyes - wider
+    for (const side of [-1, 1]) {
+      const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.025, 4, 4), mL(0xeeeedd));
+      eyeWhite.position.set(side*0.05, 1.32, 0.12);
+      group.add(eyeWhite);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.015, 4, 4), mL(0x332211));
+      pupil.position.set(side*0.05, 1.32, 0.14);
+      group.add(pupil);
+    }
+    // Thin eyebrows raised in worry
+    for (const side of [-1, 1]) {
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.008, 0.01), mL(0x2a1a0a));
+      brow.position.set(side*0.05, 1.36, 0.12);
+      brow.rotation.z = side * -0.15;
+      group.add(brow);
+    }
+    // Arms - slender, hugging self slightly
+    for (const side of [-1, 1]) {
+      const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), mL(0xDDAA88));
+      sleeve.position.set(side*0.24, 0.95, side > 0 ? 0.04 : 0);
+      group.add(sleeve);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.2, 0.07), mL(skin));
+      arm.position.set(side*0.24, 0.75, side > 0 ? 0.06 : 0.02);
+      arm.userData.isArm = true; arm.userData.side = side;
+      group.add(arm);
+    }
+    // Legs - skirt then bare legs
+    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.25, 8), mL(0x4a4a55));
+    skirt.position.y = 0.58;
+    group.add(skirt);
+    for (const side of [-1, 1]) {
+      const shin = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.08), mL(skin));
+      shin.position.set(side*0.08, 0.3, 0);
+      group.add(shin);
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.12), mL(0x333333));
+      shoe.position.set(side*0.08, 0.02, 0.02);
+      group.add(shoe);
+    }
+
+  } else {
+    // Generic fallback NPC
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.6, 0.25), mL(def.color));
+    body.position.y = 0.9; body.castShadow = true;
+    group.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), mL(skin));
+    head.position.y = 1.35;
+    group.add(head);
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.19, 8, 8), mL(0x1a1a1a));
+    hair.position.y = 1.4; hair.scale.set(1, 0.7, 1);
+    group.add(hair);
+    for (const side of [-1, 1]) {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 0.1), mL(skin));
+      arm.position.set(side*0.28, 0.85, 0);
+      arm.userData.isArm = true; arm.userData.side = side;
+      group.add(arm);
+    }
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.35, 0.12), mL(0x4a3520));
+      leg.position.set(side*0.1, 0.4, 0);
+      group.add(leg);
+    }
   }
 
   // Name + health bar label (sprite)
