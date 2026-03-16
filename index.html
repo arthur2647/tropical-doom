@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paradise Gone Dark</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;color:#fff;user-select:none}
+canvas{display:block}
+
+/* Title Screen */
+#title-screen{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#0a0a0a 0%,#1a0800 40%,#2d1500 70%,#0a0a0a 100%)}
+#title-screen::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 30%,rgba(255,80,0,0.08) 0%,transparent 70%);pointer-events:none}
+.title-main{font-size:72px;font-weight:900;letter-spacing:8px;
+  background:linear-gradient(180deg,#ff6600 0%,#ff3300 50%,#990000 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:0 0 60px rgba(255,60,0,0.4);margin-bottom:4px;font-family:'Georgia',serif}
+.title-sub{font-size:22px;color:#cc5500;letter-spacing:12px;margin-bottom:40px;font-weight:300}
+.title-lore{max-width:650px;text-align:center;color:#998877;font-size:15px;line-height:1.8;margin-bottom:40px;padding:0 20px}
+.title-start{font-size:20px;color:#ff8800;cursor:pointer;padding:16px 60px;
+  border:1px solid rgba(255,136,0,0.3);letter-spacing:4px;transition:all 0.3s;background:rgba(255,136,0,0.05)}
+.title-start:hover{background:rgba(255,136,0,0.15);border-color:#ff8800;text-shadow:0 0 20px #ff8800}
+.title-controls{color:#665544;font-size:12px;margin-top:30px;text-align:center;line-height:2}
+.title-version{position:absolute;bottom:15px;right:20px;color:#333;font-size:11px}
+
+/* Loading Screen */
+#loading-screen{position:fixed;inset:0;z-index:999;background:#0a0a0a;display:none;flex-direction:column;align-items:center;justify-content:center}
+#loading-screen .load-text{color:#cc5500;font-size:16px;letter-spacing:4px;margin-bottom:20px}
+#loading-screen .load-bar-outer{width:300px;height:4px;background:#222;border-radius:2px;overflow:hidden}
+#loading-screen .load-bar-inner{height:100%;width:0%;background:linear-gradient(90deg,#ff6600,#ff3300);transition:width 0.3s}
+#loading-screen .load-tip{color:#554433;font-size:13px;margin-top:30px;max-width:500px;text-align:center;font-style:italic}
+
+/* HUD */
+#hud{position:fixed;bottom:0;left:0;width:100%;pointer-events:none;z-index:10;display:none}
+#hud-bars{display:flex;gap:12px;padding:12px 16px;background:linear-gradient(transparent,rgba(0,0,0,0.85))}
+.hbar{flex:0 0 auto;width:180px}
+.hbar-label{font-size:10px;color:#aaa;margin-bottom:3px;display:flex;justify-content:space-between;letter-spacing:1px}
+.hbar-outer{height:6px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden}
+.hbar-inner{height:100%;transition:width 0.4s;border-radius:3px}
+.hbar-hp .hbar-inner{background:linear-gradient(90deg,#cc0000,#ff3333)}
+.hbar-sta .hbar-inner{background:linear-gradient(90deg,#00aa44,#33ff77)}
+.hbar-xp .hbar-inner{background:linear-gradient(90deg,#6600cc,#aa44ff)}
+
+#hud-top-left{position:fixed;top:12px;left:16px;z-index:10;pointer-events:none;display:none}
+#quest-tracker{font-size:13px;color:#ffaa44;text-shadow:0 1px 3px #000;max-width:350px}
+#quest-tracker .qt-title{color:#ff8833;font-weight:600;margin-bottom:4px}
+#quest-tracker .qt-obj{color:#ccaa77;font-size:12px;padding-left:12px}
+#quest-tracker .qt-obj::before{content:'> ';color:#ff6600}
+
+#hud-top-right{position:fixed;top:12px;right:16px;z-index:10;pointer-events:none;text-align:right;display:none}
+#level-display{font-size:14px;color:#ffcc44}
+#location-display{font-size:12px;color:#aa8855;margin-top:2px}
+
+#weapon-hud{position:fixed;bottom:55px;right:16px;z-index:10;pointer-events:none;text-align:right;display:none}
+#weapon-name-display{font-size:18px;color:#fff;text-shadow:0 1px 4px #000}
+#weapon-durability{font-size:11px;color:#aaa;margin-top:2px}
+
+#crosshair{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;pointer-events:none;display:none}
+#crosshair svg{width:24px;height:24px;opacity:0.6}
+
+#damage-overlay{position:fixed;inset:0;pointer-events:none;z-index:9;opacity:0;
+  background:radial-gradient(transparent 30%,rgba(180,0,0,0.6));transition:opacity 0.15s}
+
+#interact-prompt{position:fixed;bottom:140px;left:50%;transform:translateX(-50%);z-index:10;
+  pointer-events:none;display:none;text-align:center}
+#interact-prompt span{background:rgba(0,0,0,0.7);padding:8px 20px;border-radius:4px;
+  font-size:14px;color:#ffcc44;border:1px solid rgba(255,200,60,0.2)}
+
+#message-log{position:fixed;bottom:80px;left:16px;z-index:10;pointer-events:none;max-width:450px;display:none}
+.msg{font-size:13px;text-shadow:0 1px 3px #000;margin:3px 0;transition:opacity 0.5s}
+.msg-story{color:#ffcc66}
+.msg-loot{color:#44ff88}
+.msg-combat{color:#ff5555}
+.msg-quest{color:#ff8833;font-weight:600}
+.msg-system{color:#aaaaaa}
+.msg-npc{color:#ffdd88;font-style:italic}
+.msg-heal{color:#44ffaa}
+
+/* Inventory */
+#inventory-screen{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.92);display:none;overflow-y:auto}
+#inv-content{max-width:900px;margin:40px auto;padding:20px}
+#inv-content h2{color:#ff8833;font-size:28px;margin-bottom:20px;font-weight:300;letter-spacing:4px}
+.inv-section{margin-bottom:24px}
+.inv-section h3{color:#aa7744;font-size:14px;letter-spacing:2px;border-bottom:1px solid #2a2218;padding-bottom:6px;margin-bottom:10px}
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,80px);gap:8px}
+.inv-slot{width:80px;height:80px;background:rgba(255,255,255,0.03);border:1px solid #2a2218;border-radius:4px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;position:relative}
+.inv-slot:hover{background:rgba(255,136,0,0.08);border-color:#ff8833}
+.inv-slot .slot-icon{font-size:28px}
+.inv-slot .slot-name{font-size:9px;color:#998866;margin-top:4px;text-align:center}
+.inv-slot .slot-count{position:absolute;top:4px;right:6px;font-size:10px;color:#ff8833}
+.inv-slot.equipped{border-color:#ff6600;background:rgba(255,100,0,0.1)}
+#inv-details{background:rgba(255,255,255,0.02);border:1px solid #2a2218;border-radius:4px;padding:16px;margin-top:16px}
+#inv-details h4{color:#ffaa55;font-size:16px;margin-bottom:8px}
+#inv-details p{color:#aa9977;font-size:13px;line-height:1.6}
+#inv-details button{margin-top:10px;padding:8px 20px;background:rgba(255,136,0,0.15);border:1px solid #ff8833;
+  color:#ff8833;cursor:pointer;font-family:inherit;border-radius:3px;margin-right:8px}
+#inv-details button:hover{background:rgba(255,136,0,0.3)}
+
+/* Quest Log */
+#quest-screen{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.92);display:none;overflow-y:auto}
+#quest-content{max-width:700px;margin:40px auto;padding:20px}
+#quest-content h2{color:#ff8833;font-size:28px;margin-bottom:20px;font-weight:300;letter-spacing:4px}
+.quest-entry{background:rgba(255,255,255,0.02);border:1px solid #2a2218;border-radius:4px;padding:14px;margin-bottom:10px;cursor:pointer}
+.quest-entry:hover{border-color:#ff8833}
+.quest-entry.active{border-color:#ff6600;background:rgba(255,100,0,0.05)}
+.quest-entry .qe-title{color:#ffcc66;font-size:15px;margin-bottom:4px}
+.quest-entry .qe-type{font-size:10px;color:#886644;letter-spacing:1px;text-transform:uppercase}
+.quest-entry .qe-desc{color:#998877;font-size:13px;margin-top:6px}
+.quest-entry .qe-obj{color:#cc8844;font-size:12px;margin-top:8px;padding-left:12px}
+.quest-entry .qe-obj::before{content:'> ';color:#ff6600}
+.quest-entry.completed .qe-title{color:#558844;text-decoration:line-through}
+
+/* Crafting */
+#craft-screen{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.92);display:none;overflow-y:auto}
+#craft-content{max-width:700px;margin:40px auto;padding:20px}
+#craft-content h2{color:#ff8833;font-size:28px;margin-bottom:20px;font-weight:300;letter-spacing:4px}
+.craft-recipe{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.02);
+  border:1px solid #2a2218;border-radius:4px;padding:12px;margin-bottom:8px;cursor:pointer}
+.craft-recipe:hover{border-color:#ff8833}
+.craft-recipe.unavailable{opacity:0.4}
+.craft-icon{font-size:28px;width:50px;text-align:center}
+.craft-info{flex:1}
+.craft-info .ci-name{color:#ffcc66;font-size:14px}
+.craft-info .ci-desc{color:#887766;font-size:12px}
+.craft-info .ci-mats{color:#aa8855;font-size:11px;margin-top:4px}
+
+/* Dialogue */
+#dialogue-box{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:40;
+  width:700px;max-width:90vw;display:none}
+#dialogue-inner{background:rgba(10,8,5,0.95);border:1px solid #3a2a18;border-radius:6px;padding:20px}
+#dialogue-speaker{color:#ff8833;font-size:14px;font-weight:600;margin-bottom:8px;letter-spacing:1px}
+#dialogue-text{color:#ccbb99;font-size:15px;line-height:1.7}
+#dialogue-options{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.dial-opt{padding:8px 14px;background:rgba(255,136,0,0.05);border:1px solid #2a2218;border-radius:3px;
+  color:#ffaa66;cursor:pointer;font-family:inherit;font-size:13px;text-align:left}
+.dial-opt:hover{background:rgba(255,136,0,0.15);border-color:#ff8833}
+#dialogue-continue{color:#665544;font-size:11px;margin-top:10px;text-align:center}
+
+/* Death Screen */
+#death-screen{position:fixed;inset:0;z-index:100;background:rgba(60,0,0,0.95);display:none;
+  flex-direction:column;align-items:center;justify-content:center}
+#death-screen h1{font-size:56px;color:#cc0000;font-weight:300;letter-spacing:8px;margin-bottom:20px}
+#death-screen .death-info{color:#884444;font-size:15px;margin:4px 0}
+#death-screen button{margin-top:30px;padding:14px 50px;font-size:16px;background:rgba(200,0,0,0.2);
+  border:1px solid #cc0000;color:#ff4444;cursor:pointer;font-family:inherit;letter-spacing:2px;border-radius:3px}
+#death-screen button:hover{background:rgba(200,0,0,0.4)}
+
+/* Pause */
+#pause-screen{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,0.7);display:none;
+  flex-direction:column;align-items:center;justify-content:center}
+#pause-screen h2{color:#ff8833;font-size:36px;font-weight:300;letter-spacing:6px;margin-bottom:30px}
+.pause-btn{display:block;padding:12px 60px;margin:6px;font-size:16px;background:rgba(255,136,0,0.08);
+  border:1px solid #3a2a18;color:#cc8844;cursor:pointer;font-family:inherit;letter-spacing:2px;border-radius:3px;width:250px;text-align:center}
+.pause-btn:hover{background:rgba(255,136,0,0.2);border-color:#ff8833}
+
+/* Mobile Touch Controls */
+#touch-controls{position:fixed;bottom:0;left:0;width:100%;height:100%;z-index:15;pointer-events:none;display:none}
+
+#joystick-zone{position:absolute;bottom:20px;left:20px;width:140px;height:140px;pointer-events:auto;touch-action:none}
+#joystick-base{width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.08);border:2px solid rgba(255,136,0,0.25);position:relative}
+#joystick-thumb{width:56px;height:56px;border-radius:50%;background:rgba(255,136,0,0.35);border:2px solid rgba(255,136,0,0.5);
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:none}
+
+#touch-buttons{position:absolute;bottom:30px;right:20px;display:flex;gap:12px;pointer-events:auto;touch-action:none}
+.touch-btn{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;letter-spacing:1px;color:#fff;text-shadow:0 1px 2px #000;
+  -webkit-tap-highlight-color:transparent;user-select:none}
+.touch-btn-attack{background:rgba(200,40,40,0.35);border:2px solid rgba(255,60,60,0.5)}
+.touch-btn-attack:active{background:rgba(200,40,40,0.6)}
+.touch-btn-heavy{background:rgba(200,100,20,0.35);border:2px solid rgba(255,140,40,0.5)}
+.touch-btn-heavy:active{background:rgba(200,100,20,0.6)}
+.touch-btn-interact{background:rgba(40,160,40,0.35);border:2px solid rgba(60,200,60,0.5)}
+.touch-btn-interact:active{background:rgba(40,160,40,0.6)}
+
+#touch-menu-btns{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:auto;touch-action:none}
+.touch-menu-btn{padding:8px 14px;border-radius:4px;background:rgba(0,0,0,0.5);border:1px solid rgba(255,136,0,0.25);
+  color:#cc8844;font-size:11px;letter-spacing:1px;font-family:inherit;-webkit-tap-highlight-color:transparent}
+
+#touch-look-zone{position:absolute;top:0;right:0;width:55%;height:70%;pointer-events:auto;touch-action:none}
+
+/* Mobile-specific adjustments */
+@media (max-width:768px){
+  .title-main{font-size:42px!important}
+  .title-sub{font-size:16px!important}
+  .title-lore{font-size:13px!important}
+  .title-controls{display:none}
+  #minimap{width:100px!important;height:100px!important}
+  .hbar{width:120px!important}
+  #quest-tracker{font-size:11px;max-width:200px!important}
+  #weapon-hud{bottom:100px!important}
+  #message-log{bottom:170px!important;max-width:250px!important}
+  .msg{font-size:11px!important}
+  #interact-prompt{bottom:200px!important}
+  #inv-content,#quest-content,#craft-content{margin:20px 10px!important;padding:10px!important}
+  #dialogue-box{width:90vw!important;bottom:160px!important}
+}
+</style>
+</head>
+<body>
+
+<div id="title-screen">
+  <div class="title-main">PARADISE</div>
+  <div class="title-sub">GONE DARK</div>
+  <div class="title-lore">
+    You were just another tourist on Isla Perdida — white sand beaches, crystal water, paradise.
+    Then the earth shook. The old temple in the jungle split open, and something ancient poured out.
+    Now the island's people are twisted into creatures from nightmares. The boats are gone.
+    The radio is dead. You're not on vacation anymore — you're trying to survive.
+  </div>
+  <div class="title-start" id="start-btn">SURVIVE</div>
+  <div class="title-controls">
+    WASD — Move &nbsp;&bull;&nbsp; Mouse — Look &nbsp;&bull;&nbsp; LMB — Attack &nbsp;&bull;&nbsp; RMB — Heavy Attack<br>
+    E — Interact &nbsp;&bull;&nbsp; TAB — Inventory &nbsp;&bull;&nbsp; J — Quest Log &nbsp;&bull;&nbsp; C — Crafting<br>
+    1-5 — Switch Weapon &nbsp;&bull;&nbsp; SHIFT — Sprint &nbsp;&bull;&nbsp; ESC — Pause
+  </div>
+  <div class="title-version">v2.0</div>
+</div>
+
+<div id="loading-screen">
+  <div class="load-text">LOADING</div>
+  <div class="load-bar-outer"><div class="load-bar-inner" id="load-bar"></div></div>
+  <div class="load-tip" id="load-tip">The Aswang hunts at night. Listen for the clicking sound...</div>
+</div>
+
+<div id="hud">
+  <div id="hud-bars">
+    <div class="hbar hbar-hp"><div class="hbar-label"><span>HEALTH</span><span id="hp-val">100</span></div><div class="hbar-outer"><div class="hbar-inner" id="hp-bar" style="width:100%"></div></div></div>
+    <div class="hbar hbar-sta"><div class="hbar-label"><span>STAMINA</span><span id="sta-val">100</span></div><div class="hbar-outer"><div class="hbar-inner" id="sta-bar" style="width:100%"></div></div></div>
+    <div class="hbar hbar-xp"><div class="hbar-label"><span>XP</span><span id="xp-val">0/100</span></div><div class="hbar-outer"><div class="hbar-inner" id="xp-bar" style="width:0%"></div></div></div>
+  </div>
+</div>
+
+<div id="hud-top-left"><div id="quest-tracker"></div></div>
+<div id="hud-top-right">
+  <div id="level-display">Level 1</div>
+  <div id="location-display">The Resort</div>
+</div>
+
+<div id="weapon-hud">
+  <div id="weapon-name-display">Paddle</div>
+  <div id="weapon-durability">Durability: 100%</div>
+</div>
+
+<div id="crosshair"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" fill="none" stroke="white" stroke-width="1"/><line x1="12" y1="4" x2="12" y2="9" stroke="white" stroke-width="1"/><line x1="12" y1="15" x2="12" y2="20" stroke="white" stroke-width="1"/><line x1="4" y1="12" x2="9" y2="12" stroke="white" stroke-width="1"/><line x1="15" y1="12" x2="20" y2="12" stroke="white" stroke-width="1"/></svg></div>
+
+<div id="damage-overlay"></div>
+<div id="interact-prompt"><span id="interact-text">Press E to interact</span></div>
+
+<div id="touch-controls">
+  <div id="joystick-zone">
+    <div id="joystick-base"><div id="joystick-thumb"></div></div>
+  </div>
+  <div id="touch-look-zone"></div>
+  <div id="touch-buttons">
+    <div class="touch-btn touch-btn-interact" id="touch-interact">USE</div>
+    <div class="touch-btn touch-btn-attack" id="touch-attack">ATK</div>
+    <div class="touch-btn touch-btn-heavy" id="touch-heavy">HVY</div>
+  </div>
+  <div id="touch-menu-btns">
+    <div class="touch-menu-btn" id="touch-inv">ITEMS</div>
+    <div class="touch-menu-btn" id="touch-quest">QUESTS</div>
+    <div class="touch-menu-btn" id="touch-craft">CRAFT</div>
+    <div class="touch-menu-btn" id="touch-pause">PAUSE</div>
+  </div>
+</div>
+<div id="message-log"></div>
+
+<div id="inventory-screen">
+  <div id="inv-content">
+    <h2>INVENTORY</h2>
+    <div class="inv-section"><h3>WEAPONS</h3><div class="inv-grid" id="inv-weapons"></div></div>
+    <div class="inv-section"><h3>CONSUMABLES</h3><div class="inv-grid" id="inv-consumables"></div></div>
+    <div class="inv-section"><h3>MATERIALS</h3><div class="inv-grid" id="inv-materials"></div></div>
+    <div id="inv-details"></div>
+  </div>
+</div>
+
+<div id="quest-screen">
+  <div id="quest-content">
+    <h2>QUEST LOG</h2>
+    <div id="quest-list"></div>
+  </div>
+</div>
+
+<div id="craft-screen">
+  <div id="craft-content">
+    <h2>CRAFTING</h2>
+    <div id="craft-list"></div>
+  </div>
+</div>
+
+<div id="dialogue-box">
+  <div id="dialogue-inner">
+    <div id="dialogue-speaker"></div>
+    <div id="dialogue-text"></div>
+    <div id="dialogue-options"></div>
+    <div id="dialogue-continue">Click or press E to continue</div>
+  </div>
+</div>
+
+<div id="death-screen">
+  <h1>YOU DIED</h1>
+  <div class="death-info" id="death-cause">Torn apart by an Aswang</div>
+  <div class="death-info" id="death-stats">Survived 4 minutes &bull; 12 kills</div>
+  <button id="death-restart">TRY AGAIN</button>
+</div>
+
+<div id="pause-screen">
+  <h2>PAUSED</h2>
+  <div class="pause-btn" id="pause-resume">RESUME</div>
+  <div class="pause-btn" id="pause-restart">RESTART</div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
