@@ -199,7 +199,7 @@ const NPC_DEFS = {
 
 function createNPCModel(def) {
   const group = new THREE.Group();
-  const mL = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const mL = (c) => new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: 0.15 });
   const mS = (c, m = 0, r = 0.6) => new THREE.MeshStandardMaterial({ color: c, metalness: m, roughness: r });
   const skin = 0xC8956C; // Filipino skin tone
 
