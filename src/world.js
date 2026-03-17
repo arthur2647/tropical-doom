@@ -935,6 +935,10 @@ function buildResort(game) {
 // --- VILLAGE ---
 function buildVillage(game) {
   const ox = 60, oz = 20;
+
+  // Init torch lights array before building huts so torches register for flicker
+  game.torchLights = [];
+
   for (let i = 0; i < 5; i++) {
     const angle = (i / 5) * Math.PI * 2;
     const r = 12 + Math.random() * 5;
@@ -988,9 +992,6 @@ function buildVillage(game) {
   fireLight.position.set(ox, gy + 1.5, oz);
   game.scene.add(fireLight);
   game.fireLight = fireLight;
-
-  // Torch lights on huts
-  game.torchLights = [];
 
   // Workbench
   addBox(game, ox - 5, getTerrainHeightFast(ox - 5, oz + 10) + 0.5, oz + 10, 2, 1, 1.2, 0x664422, {
