@@ -425,6 +425,8 @@ export class ItemManager {
     this.placeNear('cloth_rag', 73, -48, 4, 0.15);
 
     // Quest items at specific meaningful locations
+    this.spawnQuestItem('sacred_amulet', new THREE.Vector3(-50, 0, 52),
+      'Press E - Pick up Sacred Amulet', 'found_amulet');
     this.spawnQuestItem('sacred_shell', new THREE.Vector3(75, 0, -52),
       'Press E - Pick up Sacred Shell', 'found_shell');
     this.spawnQuestItem('sacred_flame', new THREE.Vector3(45, 0, 75),

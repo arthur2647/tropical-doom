@@ -814,8 +814,10 @@ export class EnemyManager {
 
         // Walk animation
         const walkBob = Math.sin(e.animTime * e.speed * 2) * 0.1;
+        const s = e.def.scale || 1;
         e.model.children.forEach((c, ci) => {
-          if (ci >= 4) { // Arms
+          // Swing limbs that are positioned at the sides of the body
+          if (c.isMesh && Math.abs(c.position.x) > s * 0.2 && c.position.y > s * 0.3) {
             c.rotation.x = Math.sin(e.animTime * e.speed * 2 + ci) * 0.5;
           }
         });
@@ -839,12 +841,17 @@ export class EnemyManager {
       // Hit flash visual
       if (e.hitFlash > 0) {
         e.model.children.forEach(c => {
-          if (c.material) c.material.emissive?.setHex(0xff4444);
-          if (c.material) c.material.emissiveIntensity = e.hitFlash;
+          if (c.material && c.material.emissive) {
+            c.material.emissive.setHex(0xff4444);
+            c.material.emissiveIntensity = e.hitFlash;
+          }
         });
       } else {
         e.model.children.forEach(c => {
-          if (c.material && c.material.emissiveIntensity > 0) c.material.emissiveIntensity = 0;
+          if (c.material && c.material.emissive && c.material.emissiveIntensity > 0) {
+            c.material.emissive.setHex(0x000000);
+            c.material.emissiveIntensity = 0;
+          }
         });
       }
 
@@ -878,6 +885,16 @@ export class EnemyManager {
     }
     if (!hit) {
       this.game.audioManager.playSwing();
+    }
+  }
+
+  aoeHit(center, radius, damage) {
+    for (const e of this.enemies) {
+      if (e.state === 'dead') continue;
+      const dist = e.model.position.distanceTo(center);
+      if (dist <= radius) {
+        this.damageEnemy(e, damage);
+      }
     }
   }
 

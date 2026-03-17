@@ -915,7 +915,7 @@ export class NPCManager {
 
       this.currentDialogue = null;
       this.game.state = 2; // PLAYING
-      this.game.controls.lock();
+      if (!this.game.touch.enabled) this.game.controls.lock();
     } else {
       this.showDialogueLine();
     }
