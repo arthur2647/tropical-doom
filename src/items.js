@@ -418,16 +418,16 @@ export class ItemManager {
     this.placeNear('bat_wing', 38, 72, 5, 0);
 
     // Cove: scrap from boats, cloth from sails
-    this.placeNear('scrap_metal', 70, -50, 5, 0.2);
-    this.placeNear('scrap_metal', 72, -55, 4, 0.2);
-    this.placeNear('scrap_metal', 68, -48, 4, 0.2);
-    this.placeNear('cloth_rag', 70, -52, 4, 0.15);
-    this.placeNear('cloth_rag', 73, -48, 4, 0.15);
+    this.placeNear('scrap_metal', 85, -65, 5, 0.2);
+    this.placeNear('scrap_metal', 87, -70, 4, 0.2);
+    this.placeNear('scrap_metal', 83, -63, 4, 0.2);
+    this.placeNear('cloth_rag', 85, -67, 4, 0.15);
+    this.placeNear('cloth_rag', 88, -63, 4, 0.15);
 
     // Quest items at specific meaningful locations
     this.spawnQuestItem('sacred_amulet', new THREE.Vector3(-50, 0, 52),
       'Press E - Pick up Sacred Amulet', 'found_amulet');
-    this.spawnQuestItem('sacred_shell', new THREE.Vector3(75, 0, -52),
+    this.spawnQuestItem('sacred_shell', new THREE.Vector3(90, 0, -67),
       'Press E - Pick up Sacred Shell', 'found_shell');
     this.spawnQuestItem('sacred_flame', new THREE.Vector3(45, 0, 75),
       'Press E - Take the Sacred Flame', 'found_flame');

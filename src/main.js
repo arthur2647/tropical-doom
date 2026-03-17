@@ -243,31 +243,11 @@ class Game {
     this.weather.init();
     this.audioManager.init();
 
-    // Random spawn point from safe locations around the island
-    const spawnPoints = [
-      { x: 5, z: 12, name: 'the resort beach' },
-      { x: 50, z: 10, name: 'the village outskirts' },
-      { x: 65, z: -40, name: 'the fisherman\'s cove' },
-      { x: -10, z: -30, name: 'sunset beach' },
-      { x: 20, z: 50, name: 'a jungle clearing' },
-      { x: -30, z: 0, name: 'a cliff overlook' },
-      { x: 30, z: -20, name: 'the coastal path' },
-    ];
-    // Shuffle and find first spawn not blocked by colliders
-    const shuffled = spawnPoints.sort(() => Math.random() - 0.5);
-    let spawn = shuffled[0];
-    for (const sp of shuffled) {
-      const testPos = new THREE.Vector3(sp.x, 1.7, sp.z);
-      const box = new THREE.Box3().setFromCenterAndSize(
-        new THREE.Vector3(testPos.x, testPos.y - 0.85, testPos.z),
-        new THREE.Vector3(0.6, 1.7, 0.6)
-      );
-      let blocked = false;
-      for (const c of this.colliders) {
-        if (box.intersectsBox(c)) { blocked = true; break; }
-      }
-      if (!blocked) { spawn = sp; break; }
-    }
+    // Pre-compile all shaders to avoid lag spikes when encountering new materials
+    this.renderer.compile(this.scene, this.camera);
+
+    // Always spawn near the resort — safe starting area with Lena nearby
+    const spawn = { x: 5, z: 12, name: 'the resort beach' };
     this.spawnName = spawn.name;
     const spawnY = 1.7;
     this.camera.position.set(spawn.x, spawnY, spawn.z);

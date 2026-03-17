@@ -6,7 +6,7 @@ export const REGIONS = [
   { name: 'The Village', center: [60, 20], radius: 30, color: '#88aa44' },
   { name: 'Deep Jungle', center: [-50, 50], radius: 35, color: '#336622' },
   { name: 'The Temple Ruins', center: [-60, -60], radius: 25, color: '#666677' },
-  { name: 'Fisherman\'s Cove', center: [70, -50], radius: 20, color: '#4488aa' },
+  { name: 'Fisherman\'s Cove', center: [85, -65], radius: 22, color: '#4488aa' },
   { name: 'The Cliff Path', center: [-80, 0], radius: 20, color: '#887766' },
   { name: 'Mangrove Swamp', center: [40, 70], radius: 25, color: '#445533' },
 ];
@@ -1115,7 +1115,7 @@ function buildSwamp(game) {
 
 // --- COVE ---
 function buildCove(game) {
-  const ox = 70, oz = -50;
+  const ox = 85, oz = -65;
   const gy = getTerrainHeightFast(ox, oz);
   addBox(game, ox, gy + 0.4, oz - 5, 2, 0.2, 8, 0x6B4226);
   for (let i = 0; i < 4; i++) {

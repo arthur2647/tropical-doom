@@ -914,13 +914,13 @@ export class EnemyManager {
   }
 
   spawnInitial() {
-    // Infected AWAY from spawn - scattered around resort perimeter (not on top of player)
+    // Infected far from resort so player has time to find Lena and get a weapon
     for (let i = 0; i < 4; i++) {
       const angle = (i / 4) * Math.PI * 2 + 0.5; // offset so none are at 0,0
       this.spawn('infected', new THREE.Vector3(
-        Math.cos(angle) * 35 + (Math.random() - 0.5) * 10,
+        Math.cos(angle) * 55 + (Math.random() - 0.5) * 10,
         0,
-        Math.sin(angle) * 35 + (Math.random() - 0.5) * 10
+        Math.sin(angle) * 55 + (Math.random() - 0.5) * 10
       ));
     }
     // Aswang in the jungle - far from player
@@ -1260,7 +1260,7 @@ export class EnemyManager {
     const villageDist = Math.sqrt((pos.x - 60) ** 2 + (pos.z - 20) ** 2);
     if (villageDist < 35) this.game.questManager.triggerEvent('kill_village_enemy');
 
-    const coveDist = Math.sqrt((pos.x - 70) ** 2 + (pos.z + 50) ** 2);
+    const coveDist = Math.sqrt((pos.x - 85) ** 2 + (pos.z + 65) ** 2);
     if (coveDist < 25) this.game.questManager.triggerEvent('kill_cove_enemy');
 
     // Death animation - topple over, flash, fade out
