@@ -349,6 +349,7 @@ export function createWorld(game) {
   // Colliders
   game.colliders = [];
   game.platforms = [];
+  game.ceilings = []; // ceiling boxes that block upward movement
 
   // Build structures
   buildResort(game);
@@ -1165,6 +1166,14 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
   roof.castShadow = true;
   game.scene.add(roof);
 
+  // Ceiling collider — prevents jumping through the roof
+  const ceilingBox = new THREE.Box3(
+    new THREE.Vector3(x - 1.75, y + stiltH + 2.3, z - 1.75),
+    new THREE.Vector3(x + 1.75, y + stiltH + 2.6, z + 1.75)
+  );
+  game.colliders.push(ceilingBox);
+  game.ceilings.push({ minX: x - 1.75, maxX: x + 1.75, minZ: z - 1.75, maxZ: z + 1.75, bottom: y + stiltH + 2.3 });
+
   // Torch by entrance
   const torchX = x + 2, torchZ = z + 1.8;
   addCylinder(game, torchX, y + stiltH + 0.5, torchZ, 0.03, 0.04, 1.2, 0x5C4033, { collider: false });
@@ -1208,13 +1217,17 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
     if (postH > 0.2) {
       addCylinder(game, x, stepGround + postH / 2, stepZ, 0.05, 0.06, postH, 0x5C4033, { collider: false });
     }
-    // Walkable platform for this step
-    game.platforms.push({
-      minX: x - stairWidth / 2, maxX: x + stairWidth / 2,
-      minZ: stepZ - 0.25, maxZ: stepZ + 0.25,
-      top: stepH
-    });
   }
+  // Single ramp platform covering entire staircase — interpolates height based on Z
+  game.platforms.push({
+    minX: x - stairWidth / 2, maxX: x + stairWidth / 2,
+    minZ: stairZ - 0.3, maxZ: bottomStepZ + 0.3,
+    ramp: true,
+    zStart: bottomStepZ + 0.3,  // bottom of stairs (farthest from hut)
+    zEnd: stairZ - 0.3,          // top of stairs (at hut entrance)
+    hStart: groundAtBottom,      // terrain height at bottom
+    hEnd: y + stiltH + 0.075,   // hut floor level at top
+  });
   // Stair stringers (diagonal beams on each side, from ground at bottom to hut floor)
   for (const side of [-stairWidth / 2 - 0.05, stairWidth / 2 + 0.05]) {
     // Railing post at top

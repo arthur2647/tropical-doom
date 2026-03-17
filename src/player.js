@@ -549,6 +549,11 @@ export class Player {
       this.vertVelocity -= 20 * dt;
       cam.position.y += this.vertVelocity * dt;
 
+      // Ceiling check — prevent jumping through roofs
+      if (this.vertVelocity > 0) {
+        this.checkCeiling(cam);
+      }
+
       // Ground snap
       const groundH = this.getGroundHeight(cam.position.x, cam.position.z);
       if (cam.position.y < groundH + 1.7) {
@@ -578,6 +583,12 @@ export class Player {
 
       this.vertVelocity -= 20 * dt;
       cam.position.y += this.vertVelocity * dt;
+
+      // Ceiling check — prevent jumping through roofs
+      if (this.vertVelocity > 0) {
+        this.checkCeiling(cam);
+      }
+
       const groundH = this.getGroundHeight(cam.position.x, cam.position.z);
       if (cam.position.y < groundH + 1.7) {
         cam.position.y = groundH + 1.7;
@@ -682,14 +693,38 @@ export class Player {
       for (let i = 0; i < platforms.length; i++) {
         const p = platforms[i];
         if (x >= p.minX && x <= p.maxX && z >= p.minZ && z <= p.maxZ) {
-          // Only stand on platform if feet are above or near the surface
-          if (camY >= p.top - 0.5) {
-            h = Math.max(h, p.top);
+          if (p.ramp) {
+            // Ramp platform: interpolate height based on Z position
+            const t = Math.max(0, Math.min(1, (z - p.zStart) / (p.zEnd - p.zStart)));
+            const rampH = p.hStart + t * (p.hEnd - p.hStart);
+            h = Math.max(h, rampH);
+          } else {
+            // Only stand on platform if feet are above or near the surface
+            if (camY >= p.top - 0.5) {
+              h = Math.max(h, p.top);
+            }
           }
         }
       }
     }
     return h;
+  }
+
+  checkCeiling(cam) {
+    const ceilings = this.game.ceilings;
+    if (!ceilings) return;
+    const px = cam.position.x;
+    const pz = cam.position.z;
+    const headY = cam.position.y; // camera is at head height
+    for (let i = 0; i < ceilings.length; i++) {
+      const c = ceilings[i];
+      if (px >= c.minX && px <= c.maxX && pz >= c.minZ && pz <= c.maxZ) {
+        if (headY > c.bottom) {
+          cam.position.y = c.bottom;
+          this.vertVelocity = 0;
+        }
+      }
+    }
   }
 
   updateRegion() {

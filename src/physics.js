@@ -231,9 +231,9 @@ export class PhysicsWorld {
       this.playerBody.velocity.y = 0;
     }
 
-    // Step physics (fixed timestep for stability)
+    // Step physics (fixed timestep for stability, fewer sub-steps on mobile)
     const fixedStep = 1 / 60;
-    const maxSubSteps = 3;
+    const maxSubSteps = this.game.isMobile ? 2 : 3;
     this.world.step(fixedStep, dt, maxSubSteps);
 
     // Sync player body XZ -> camera (cannon handles wall collision response)

@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Paradise Gone Dark</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
+html,body{touch-action:none}
 body{background:#000;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;color:#fff;user-select:none}
-canvas{display:block}
+canvas{display:block;touch-action:none}
 
 /* Title Screen */
 #title-screen{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -195,6 +196,8 @@ canvas{display:block}
 .touch-btn-attack:active{background:rgba(200,40,40,0.6)}
 .touch-btn-heavy{background:rgba(200,100,20,0.35);border:2px solid rgba(255,140,40,0.5)}
 .touch-btn-heavy:active{background:rgba(200,100,20,0.6)}
+.touch-btn-jump{background:rgba(40,80,200,0.35);border:2px solid rgba(60,120,255,0.5)}
+.touch-btn-jump:active{background:rgba(40,80,200,0.6)}
 .touch-btn-interact{background:rgba(40,160,40,0.35);border:2px solid rgba(60,200,60,0.5)}
 .touch-btn-interact:active{background:rgba(40,160,40,0.6)}
 
@@ -303,6 +306,7 @@ canvas{display:block}
   </div>
   <div id="touch-look-zone"></div>
   <div id="touch-buttons">
+    <div class="touch-btn touch-btn-jump" id="touch-jump">JUMP</div>
     <div class="touch-btn touch-btn-interact" id="touch-interact">USE</div>
     <div class="touch-btn touch-btn-attack" id="touch-attack">ATK</div>
     <div class="touch-btn touch-btn-heavy" id="touch-heavy">HVY</div>

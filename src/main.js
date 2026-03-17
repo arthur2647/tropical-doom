@@ -44,11 +44,11 @@ class Game {
     this.baseFOV = 75;
     this.targetFOV = 75;
     this.cameraShake = 0;
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: !this.isMobile, logarithmicDepthBuffer: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.5 : 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = this.isMobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.0 : 2));
+    this.renderer.shadowMap.enabled = !this.isMobile;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     document.body.prepend(this.renderer.domElement);
@@ -56,13 +56,15 @@ class Game {
     // Post-processing
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.4, // strength - slightly stronger bloom for glowing effects
-      0.7, // radius
-      0.8  // threshold - torches, fire, amulets bloom nicely
-    );
-    this.composer.addPass(this.bloomPass);
+    if (!this.isMobile) {
+      this.bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.4, // strength - slightly stronger bloom for glowing effects
+        0.7, // radius
+        0.8  // threshold - torches, fire, amulets bloom nicely
+      );
+      this.composer.addPass(this.bloomPass);
+    }
 
     // SSAO - ambient occlusion for depth and grounding (disabled on mobile for performance)
     if (!this.isMobile) {

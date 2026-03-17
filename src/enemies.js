@@ -1047,7 +1047,7 @@ export class EnemyManager {
     this.game = game;
     this.enemies = [];
     this.spawnTimer = 0;
-    this.maxEnemies = 20;
+    this.maxEnemies = this.game.isMobile ? 10 : 20;
     this.difficulty = 1;
     // Pre-allocated vectors for melee hit detection
     this._toEnemy = new THREE.Vector3();

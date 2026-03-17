@@ -98,6 +98,15 @@ export class TouchControls {
       if (this.game.state === 2) this.game.player.attack(true);
     }, { passive: false });
 
+    document.getElementById('touch-jump').addEventListener('touchstart', e => {
+      e.preventDefault();
+      if (this.game.state === 2) this.game.keys['Space'] = true;
+    }, { passive: false });
+    document.getElementById('touch-jump').addEventListener('touchend', e => {
+      e.preventDefault();
+      this.game.keys['Space'] = false;
+    }, { passive: false });
+
     document.getElementById('touch-interact').addEventListener('touchstart', e => {
       e.preventDefault();
       if (this.game.state === 2) this.game.interact();
@@ -192,10 +201,10 @@ export class TouchControls {
     if (this.lookDelta.x !== 0 || this.lookDelta.y !== 0) {
       const sensitivity = 0.004;
 
-      // Horizontal rotation (yaw) - rotate the camera's parent euler
+      // Horizontal rotation (yaw) — matches PointerLockControls convention
       camera.rotation.y -= this.lookDelta.x * sensitivity;
 
-      // Vertical rotation (pitch) - clamp to avoid flipping
+      // Vertical rotation (pitch) — swipe down = look down, clamp to avoid flipping
       camera.rotation.x -= this.lookDelta.y * sensitivity;
       camera.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, camera.rotation.x));
 
