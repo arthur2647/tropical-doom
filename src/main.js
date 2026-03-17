@@ -34,6 +34,9 @@ class Game {
     this.daySpeed = 0.008; // Full cycle ~125 seconds for demo
     this.isNight = false;
 
+    // Detect mobile early (before renderer setup needs it)
+    this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     // Three.js
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
@@ -43,9 +46,9 @@ class Game {
     this.cameraShake = 0;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.touch.isTouchDevice ? 1.5 : 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1.5 : 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = this.touch.isTouchDevice ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = this.isMobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     document.body.prepend(this.renderer.domElement);
@@ -158,7 +161,6 @@ class Game {
     this.audioManager = new AudioManager(this);
     this.weather = new WeatherSystem(this);
     this.touch = new TouchControls(this);
-    this.isMobile = this.touch.isTouchDevice;
 
     this.interactables = [];
     this.destructibles = [];
