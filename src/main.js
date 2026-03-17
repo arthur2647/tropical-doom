@@ -43,9 +43,9 @@ class Game {
     this.cameraShake = 0;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.touch.isTouchDevice ? 1.5 : 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = this.touch.isTouchDevice ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     document.body.prepend(this.renderer.domElement);
@@ -61,13 +61,17 @@ class Game {
     );
     this.composer.addPass(this.bloomPass);
 
-    // SSAO - ambient occlusion for depth and grounding
-    this.ssaoPass = new SSAOPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
-    this.ssaoPass.kernelRadius = 12;
-    this.ssaoPass.minDistance = 0.001;
-    this.ssaoPass.maxDistance = 0.15;
-    this.ssaoPass.output = SSAOPass.OUTPUT.Default;
-    this.composer.addPass(this.ssaoPass);
+    // SSAO - ambient occlusion for depth and grounding (disabled on mobile for performance)
+    if (!this.isMobile) {
+      const ssaoW = Math.floor(window.innerWidth / 2);
+      const ssaoH = Math.floor(window.innerHeight / 2);
+      this.ssaoPass = new SSAOPass(this.scene, this.camera, ssaoW, ssaoH);
+      this.ssaoPass.kernelRadius = 8;
+      this.ssaoPass.minDistance = 0.002;
+      this.ssaoPass.maxDistance = 0.12;
+      this.ssaoPass.output = SSAOPass.OUTPUT.Default;
+      this.composer.addPass(this.ssaoPass);
+    }
 
     // Vignette + color grading + film grain pass
     const vignetteShader = {
@@ -154,6 +158,7 @@ class Game {
     this.audioManager = new AudioManager(this);
     this.weather = new WeatherSystem(this);
     this.touch = new TouchControls(this);
+    this.isMobile = this.touch.isTouchDevice;
 
     this.interactables = [];
     this.destructibles = [];
@@ -248,7 +253,7 @@ class Game {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.composer.setSize(window.innerWidth, window.innerHeight);
-      if (this.ssaoPass) this.ssaoPass.setSize(window.innerWidth, window.innerHeight);
+      if (this.ssaoPass) this.ssaoPass.setSize(Math.floor(window.innerWidth / 2), Math.floor(window.innerHeight / 2));
     });
   }
 
@@ -518,10 +523,7 @@ class Game {
       this.touch.applyToPlayer(this.player, this.camera, dt);
       this.updateDayNight(dt);
       this.player.update(dt);
-      if (this.physics) {
-        this.physics.update(dt);
-        this.player.postPhysicsUpdate();
-      }
+      if (this.physics) this.physics.update(dt);
       this.enemyManager.update(dt);
       this.npcManager.update(dt);
       this.itemManager.update(dt);
@@ -567,9 +569,10 @@ class Game {
       this.sunLight.target.updateMatrixWorld();
     }
 
-    // Bloom intensity adjusts with time of day
+    // Bloom intensity adjusts with time of day (reduced on mobile)
     if (this.bloomPass) {
-      this.bloomPass.strength = this.isNight ? 0.6 : 0.3;
+      const bloomScale = this.isMobile ? 0.5 : 1.0;
+      this.bloomPass.strength = (this.isNight ? 0.6 : 0.3) * bloomScale;
     }
 
     // Vignette/grain adjusts at night

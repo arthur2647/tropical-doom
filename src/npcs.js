@@ -1054,10 +1054,10 @@ export class NPCManager {
                   }
                 });
               } else if (activity === 'patrol') {
-                // Walk in a small circle
-                const angle = npc.animTime * 0.5;
-                const px = npc.homePos.x + Math.cos(angle) * 3;
-                const pz = npc.homePos.z + Math.sin(angle) * 3;
+                // Walk a patrol path (figure-8 pattern, looks more natural than a circle)
+                const angle = npc.animTime * 0.3;
+                const px = npc.homePos.x + Math.cos(angle) * 5;
+                const pz = npc.homePos.z + Math.sin(angle * 2) * 3;
                 const tox = px - npc.model.position.x;
                 const toz = pz - npc.model.position.z;
                 const toDist = Math.sqrt(tox * tox + toz * toz);

@@ -46,7 +46,7 @@ export class PhysicsWorld {
   // Create terrain as a heightfield
   initTerrain() {
     const size = 300;
-    const res = 60; // lower res for physics (performance)
+    const res = this.game.isMobile ? 40 : 60; // lower res for physics (performance)
     const half = size / 2;
     const matrix = [];
     const elSize = size / res;
@@ -93,7 +93,7 @@ export class PhysicsWorld {
     }
   }
 
-  // Create player physics body (sphere for smooth sliding)
+  // Create player physics body (sphere for smooth wall sliding)
   initPlayer() {
     const cam = this.game.camera;
     this.playerBody = new CANNON.Body({
@@ -102,7 +102,7 @@ export class PhysicsWorld {
       shape: new CANNON.Sphere(0.35),
       position: new CANNON.Vec3(cam.position.x, cam.position.y - 1.35, cam.position.z),
       linearDamping: 0.05,
-      angularDamping: 1.0, // prevent rolling
+      angularDamping: 1.0,
       fixedRotation: true,
     });
     this.playerBody.collisionFilterGroup = 2;
@@ -151,7 +151,8 @@ export class PhysicsWorld {
   }
 
   // Spawn physics debris (replaces the simple particle debris)
-  spawnDebris(x, y, z, color, count = 6) {
+  spawnDebris(x, y, z, color, count) {
+    count = count || (this.game.isMobile ? 3 : 6);
     const pieces = [];
     for (let i = 0; i < count; i++) {
       const size = 0.05 + Math.random() * 0.12;
@@ -206,26 +207,27 @@ export class PhysicsWorld {
 
   // Update physics world and sync visuals
   update(dt) {
+    // Counteract cannon's gravity on player — we manage Y ourselves
+    if (this.playerBody) {
+      const g = this.world.gravity;
+      const m = this.playerBody.mass;
+      this.playerBody.force.y -= g.y * m; // cancel world gravity
+      // Keep cannon body Y synced to camera (game controls Y via terrain + gravity)
+      this.playerBody.position.y = this.game.camera.position.y - 1.35;
+      this.playerBody.velocity.y = 0;
+    }
+
     // Step physics (fixed timestep for stability)
     const fixedStep = 1 / 60;
     const maxSubSteps = 3;
     this.world.step(fixedStep, dt, maxSubSteps);
 
-    // Sync player body -> camera
+    // Sync player body XZ -> camera (cannon handles wall collision response)
     if (this.playerBody) {
       const cam = this.game.camera;
-      // We set player body position from player movement (kinematic-like)
-      // but let cannon handle collision response
-      const pb = this.playerBody;
-      cam.position.x = pb.position.x;
-      cam.position.z = pb.position.z;
-      // Y is managed by game (terrain + platforms + gravity), but apply cannon pushback
-      // Only use cannon Y if it pushed us up (collision response)
-      const feetY = pb.position.y;
-      const camTargetY = feetY + 1.35;
-      if (camTargetY > cam.position.y) {
-        cam.position.y = camTargetY;
-      }
+      cam.position.x = this.playerBody.position.x;
+      cam.position.z = this.playerBody.position.z;
+      // Y is entirely managed by game (terrain + platforms + manual gravity)
     }
 
     // Sync debris visuals
@@ -265,10 +267,5 @@ export class PhysicsWorld {
     if (!this.playerBody) return;
     this.playerBody.position.set(x, y - 1.35, z);
     this.playerBody.velocity.set(0, 0, 0);
-  }
-
-  setPlayerVerticalVelocity(vy) {
-    if (!this.playerBody) return;
-    this.playerBody.velocity.y = vy;
   }
 }

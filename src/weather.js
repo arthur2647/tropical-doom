@@ -14,8 +14,9 @@ export class WeatherSystem {
   }
 
   init() {
-    // Rain particle system
-    const count = 2000;
+    // Rain particle system (fewer on mobile for performance)
+    const isMobile = this.game.isMobile;
+    const count = isMobile ? 800 : 2000;
     const geo = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const velocities = new Float32Array(count * 3);

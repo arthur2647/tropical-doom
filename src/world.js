@@ -228,8 +228,9 @@ export function createWorld(game) {
   const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x3a5f0b, 0.5);
   scene.add(hemiLight);
 
-  // Terrain - higher resolution for detailed terrain
-  const terrainGeo = new THREE.PlaneGeometry(300, 300, 200, 200);
+  // Terrain - balanced resolution (detail vs performance)
+  const terrainDetail = game.isMobile ? 100 : 150;
+  const terrainGeo = new THREE.PlaneGeometry(300, 300, terrainDetail, terrainDetail);
   terrainGeo.rotateX(-Math.PI / 2);
   const verts = terrainGeo.attributes.position;
 
@@ -430,7 +431,8 @@ export function createWorld(game) {
 
   // --- Clouds ---
   game.clouds = [];
-  for (let i = 0; i < 8; i++) {
+  const cloudCount = game.isMobile ? 4 : 8;
+  for (let i = 0; i < cloudCount; i++) {
     const cloud = new THREE.Group();
     const numPuffs = 3 + Math.floor(Math.random() * 3);
     const cloudMat = new THREE.MeshBasicMaterial({
@@ -455,7 +457,7 @@ export function createWorld(game) {
   }
 
   // --- Falling leaves (jungle area) ---
-  const leafCount = 25;
+  const leafCount = game.isMobile ? 12 : 25;
   const leafGeo = new THREE.BufferGeometry();
   const leafPos = new Float32Array(leafCount * 3);
   const leafVel = new Float32Array(leafCount * 3);
