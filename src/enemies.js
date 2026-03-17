@@ -918,6 +918,8 @@ export class EnemyManager {
     this._enemyBox = new THREE.Box3();
     this._enemyCenter = new THREE.Vector3();
     this._enemySize = new THREE.Vector3(0.8, 1.6, 0.8);
+    // Pre-allocated raycaster for ranged attacks
+    this._rangedRay = new THREE.Raycaster();
   }
 
   checkEnemyCollision(x, y, z) {
@@ -1221,7 +1223,10 @@ export class EnemyManager {
   }
 
   rangedHit(origin, direction, range, damage) {
-    const ray = new THREE.Raycaster(origin, direction, 0, range);
+    const ray = this._rangedRay;
+    ray.set(origin, direction);
+    ray.near = 0;
+    ray.far = range;
     let closest = null, closestDist = range;
 
     for (const e of this.enemies) {

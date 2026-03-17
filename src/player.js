@@ -270,7 +270,16 @@ export class Player {
   }
 
   buildWeaponGeometry() {
-    while (this.weaponMesh.children.length) this.weaponMesh.remove(this.weaponMesh.children[0]);
+    // Dispose old geometries/materials to prevent GPU memory leaks
+    while (this.weaponMesh.children.length) {
+      const child = this.weaponMesh.children[0];
+      this.weaponMesh.remove(child);
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (child.material.map) child.material.map.dispose();
+        child.material.dispose();
+      }
+    }
     const w = this.weapon;
     const std = (color, metal = 0, rough = 0.6) =>
       new THREE.MeshStandardMaterial({ color, metalness: metal, roughness: rough });
