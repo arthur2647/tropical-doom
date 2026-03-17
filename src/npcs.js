@@ -235,7 +235,7 @@ const NPC_DEFS = {
 
 function createNPCModel(def) {
   const group = new THREE.Group();
-  const mL = (c) => new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: 0.15 });
+  const mL = (c) => new THREE.MeshLambertMaterial({ color: c, emissive: c, emissiveIntensity: 0.4 });
   const mS = (c, m = 0, r = 0.6) => new THREE.MeshStandardMaterial({ color: c, metalness: m, roughness: r });
   const skin = 0xC8956C; // Filipino skin tone
 
@@ -652,7 +652,8 @@ export class NPCManager {
       const model = createNPCModel(def);
       const [x, , z] = def.position;
       const gy = getTerrainHeightFast(x, z);
-      model.position.set(x, gy, z);
+      // Raise NPCs slightly above ground to prevent terrain clipping
+      model.position.set(x, gy + 0.1, z);
 
       model.userData = {
         interactable: true,
@@ -671,7 +672,7 @@ export class NPCManager {
         // Combat state
         hp: def.hp,
         maxHp: def.hp,
-        homePos: new THREE.Vector3(x, gy, z),
+        homePos: new THREE.Vector3(x, gy + 0.1, z),
         combatState: 'idle', // idle, alert, fighting, returning, downed
         target: null,
         attackCooldown: 0,
@@ -778,7 +779,7 @@ export class NPCManager {
           npc.hp = Math.floor(npc.maxHp * 0.5);
           npc.model.rotation.x = 0;
           const gy = getTerrainHeightFast(npc.homePos.x, npc.homePos.z);
-          npc.model.position.set(npc.homePos.x, gy, npc.homePos.z);
+          npc.model.position.set(npc.homePos.x, gy + 0.1, npc.homePos.z);
           npc.model.userData.promptText = `Press E - Talk to ${npc.def.name}`;
           this.updateHealthBar(npc);
           this.callout(npc, 'revived');
@@ -822,7 +823,7 @@ export class NPCManager {
             npc.model.position.x += (ex / enemyDist) * moveSpeed;
             npc.model.position.z += (ez / enemyDist) * moveSpeed;
             const gy = getTerrainHeightFast(npc.model.position.x, npc.model.position.z);
-            npc.model.position.y = gy;
+            npc.model.position.y = gy + 0.1;
 
             // Walk animation
             npc.model.children.forEach(c => {
@@ -897,7 +898,7 @@ export class NPCManager {
             npc.model.position.x += (hx / hDist) * 2 * dt;
             npc.model.position.z += (hz / hDist) * 2 * dt;
             const gy = getTerrainHeightFast(npc.model.position.x, npc.model.position.z);
-            npc.model.position.y = gy;
+            npc.model.position.y = gy + 0.1;
           } else {
             npc.combatState = 'idle';
           }
@@ -928,7 +929,7 @@ export class NPCManager {
       // Idle bob
       if (npc.combatState === 'idle') {
         const gy = getTerrainHeightFast(npc.model.position.x, npc.model.position.z);
-        npc.model.position.y = gy + Math.sin(Date.now() * 0.002) * 0.01;
+        npc.model.position.y = gy + 0.1 + Math.sin(Date.now() * 0.002) * 0.01;
       }
     }
   }
