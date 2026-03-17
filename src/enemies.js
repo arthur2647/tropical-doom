@@ -914,6 +914,20 @@ export class EnemyManager {
     // Pre-allocated vectors for melee hit detection
     this._toEnemy = new THREE.Vector3();
     this._meleeDir = new THREE.Vector3();
+    // Pre-allocated objects for enemy collision
+    this._enemyBox = new THREE.Box3();
+    this._enemyCenter = new THREE.Vector3();
+    this._enemySize = new THREE.Vector3(0.8, 1.6, 0.8);
+  }
+
+  checkEnemyCollision(x, y, z) {
+    if (!this.game.colliders) return false;
+    this._enemyCenter.set(x, y + 0.8, z);
+    this._enemyBox.setFromCenterAndSize(this._enemyCenter, this._enemySize);
+    for (const c of this.game.colliders) {
+      if (this._enemyBox.intersectsBox(c)) return true;
+    }
+    return false;
   }
 
   spawnInitial() {
@@ -1087,8 +1101,20 @@ export class EnemyManager {
         if (tDist > 0.5) {
           const moveX = (tdx / tDist) * e.speed * dt;
           const moveZ = (tdz / tDist) * e.speed * dt;
-          e.model.position.x += moveX;
-          e.model.position.z += moveZ;
+          const newX = e.model.position.x + moveX;
+          const newZ = e.model.position.z + moveZ;
+          // Check colliders before moving
+          if (!this.checkEnemyCollision(newX, e.model.position.y, newZ)) {
+            e.model.position.x = newX;
+            e.model.position.z = newZ;
+          } else {
+            // Try sliding along walls
+            if (!this.checkEnemyCollision(newX, e.model.position.y, e.model.position.z)) {
+              e.model.position.x = newX;
+            } else if (!this.checkEnemyCollision(e.model.position.x, e.model.position.y, newZ)) {
+              e.model.position.z = newZ;
+            }
+          }
         }
 
         // Ground follow
