@@ -1338,6 +1338,7 @@ export class NPCManager {
 
   openSkillShop() {
     const box = document.getElementById('dialogue-box');
+    box.style.display = 'block';
     const player = this.game.player;
     document.getElementById('dialogue-speaker').textContent = 'Aling Rosa - Skill Shop';
     document.getElementById('dialogue-text').textContent = `Your gold: ${player.gold}`;
@@ -1368,6 +1369,7 @@ export class NPCManager {
 
   openMerchantShop() {
     const box = document.getElementById('dialogue-box');
+    box.style.display = 'block';
     const player = this.game.player;
     document.getElementById('dialogue-speaker').textContent = 'Mang Berto - Shop';
     document.getElementById('dialogue-text').textContent = `Your gold: ${player.gold}`;
