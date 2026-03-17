@@ -3,37 +3,37 @@ import { getTerrainHeightFast } from './world.js';
 
 const ENEMY_DEFS = {
   infected: {
-    name: 'Infected Villager', hp: 40, speed: 2.5, damage: 8, xp: 15, gold: 5,
+    name: 'Infected Villager', hp: 40, speed: 2.5, damage: 5, xp: 15, gold: 5,
     color: 0x8B6955, size: 0.9, attackRange: 2, attackSpeed: 1.2,
     bodyParts: { head: 0x7A6050, body: 0x556644, limbs: 0x7A6050 }
   },
   aswang: {
-    name: 'Aswang', hp: 80, speed: 3.5, damage: 15, xp: 30, gold: 12,
+    name: 'Aswang', hp: 80, speed: 3.5, damage: 10, xp: 30, gold: 12,
     color: 0xAA3333, size: 0.85, attackRange: 2.2, attackSpeed: 0.8,
     bodyParts: { head: 0x993333, body: 0x441111, limbs: 0x882222 }
   },
   tiyanak: {
-    name: 'Tiyanak', hp: 25, speed: 4.5, damage: 6, xp: 12, gold: 8,
+    name: 'Tiyanak', hp: 25, speed: 4.5, damage: 4, xp: 12, gold: 8,
     color: 0xBBA088, size: 0.5, attackRange: 1.5, attackSpeed: 0.5,
     bodyParts: { head: 0xAA9080, body: 0x998070, limbs: 0x887060 }
   },
   tikbalang: {
-    name: 'Tikbalang', hp: 200, speed: 1.8, damage: 30, xp: 60, gold: 25,
+    name: 'Tikbalang', hp: 200, speed: 1.8, damage: 22, xp: 60, gold: 25,
     color: 0x6B4226, size: 1.3, attackRange: 3, attackSpeed: 1.6,
     bodyParts: { head: 0x704020, body: 0x5A3A1A, limbs: 0x604020 }
   },
   manananggal: {
-    name: 'Manananggal', hp: 100, speed: 2.8, damage: 18, xp: 45, gold: 20,
+    name: 'Manananggal', hp: 100, speed: 2.8, damage: 12, xp: 45, gold: 20,
     color: 0x883388, size: 0.85, attackRange: 8, attackSpeed: 1.4, ranged: true,
     bodyParts: { head: 0x772277, body: 0x551155, limbs: 0x662266 }
   },
   kapre: {
-    name: 'Kapre', hp: 500, speed: 1.0, damage: 50, xp: 200, gold: 80,
+    name: 'Kapre', hp: 500, speed: 1.0, damage: 35, xp: 200, gold: 80,
     color: 0x3D2B1F, size: 2.0, attackRange: 4, attackSpeed: 2.0, boss: true,
     bodyParts: { head: 0x2D1B0F, body: 0x3D2B1F, limbs: 0x4D3B2F }
   },
   diwata: {
-    name: 'Corrupted Diwata', hp: 800, speed: 2.0, damage: 40, xp: 500, gold: 200,
+    name: 'Corrupted Diwata', hp: 800, speed: 2.0, damage: 30, xp: 500, gold: 200,
     color: 0x440088, size: 1.5, attackRange: 10, attackSpeed: 1.0, boss: true, ranged: true,
     bodyParts: { head: 0x660099, body: 0x330066, limbs: 0x550088 }
   }
@@ -986,7 +986,7 @@ export class EnemyManager {
   }
 
   onNightfall() {
-    this.difficulty = 1.5;
+    this.difficulty = 1.3;
     // Spawn extra enemies
     const playerPos = this.game.camera.position;
     for (let i = 0; i < 5; i++) {
@@ -1025,6 +1025,13 @@ export class EnemyManager {
       e.animTime += dt;
       e.attackCooldown -= dt;
       if (e.hitFlash > 0) e.hitFlash -= dt * 3;
+
+      // Stun timer (from Battle Cry skill)
+      if (e.stunTimer > 0) {
+        e.stunTimer -= dt;
+        if (e.stunTimer <= 0) e.state = 'chase';
+        continue; // Skip AI while stunned
+      }
 
       // Distance to player
       const dx = playerPos.x - e.model.position.x;

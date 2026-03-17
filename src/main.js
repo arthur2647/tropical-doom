@@ -174,6 +174,11 @@ class Game {
         if (e.code === 'Digit3') this.player.switchWeapon(2);
         if (e.code === 'Digit4') this.player.switchWeapon(3);
         if (e.code === 'Digit5') this.player.switchWeapon(4);
+        // Skills
+        if (e.code === 'KeyQ') this.player.useSkill(0);
+        if (e.code === 'KeyF') this.player.useSkill(1);
+        if (e.code === 'KeyV') this.player.useSkill(2);
+        if (e.code === 'KeyX') this.player.useSkill(3);
       } else if (this.state === GameState.INVENTORY || this.state === GameState.QUEST_LOG || this.state === GameState.CRAFTING) {
         if (e.code === 'Escape' || e.code === 'Tab' || e.code === 'KeyJ' || e.code === 'KeyC') {
           e.preventDefault();
@@ -382,10 +387,19 @@ class Game {
         id: 'inventory',
         title: 'INVENTORY & CRAFTING',
         text: k(
-          '<b>TAB</b> — Inventory (use consumables, switch weapons)<br><b>C</b> — Crafting (combine materials at workbenches)<br><b>J</b> — Quest Log (track your objectives)',
+          '<b>TAB</b> — Inventory (use consumables, switch weapons, view armor)<br><b>C</b> — Crafting (combine materials at workbenches)<br><b>J</b> — Quest Log (track your objectives)',
           '<b>ITEMS</b> — Inventory<br><b>CRAFT</b> — Crafting (combine materials at workbenches)<br><b>QUESTS</b> — Quest Log'
         ),
-        hint: 'Collect materials like scrap metal, cloth rags, and herbs to craft better weapons and healing items.',
+        hint: 'Craft armor from cloth and hides for damage reduction. Collect materials to craft better weapons too.',
+      },
+      {
+        id: 'skills',
+        title: 'SKILLS & ARMOR',
+        text: k(
+          '<b>Q/F/V/X</b> — Use skills (must be purchased first)<br>Visit <b>Aling Rosa</b> the Espiritista at the Temple Ruins to buy skills with gold.<br>Craft <b>armor</b> at workbenches for damage reduction.',
+          'Buy skills from the Espiritista with gold. Craft armor at workbenches for protection.'
+        ),
+        hint: 'Kill enemies to earn gold, then visit Aling Rosa to learn powerful abilities.',
       },
       {
         id: 'progression',

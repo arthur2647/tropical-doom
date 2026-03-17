@@ -40,6 +40,16 @@ const ITEM_DEFS = {
     desc: 'The universal repair tool.' },
   battery: { name: 'Battery', icon: '\u{1F50B}', color: 0x44AA44, category: 'material',
     desc: 'A partially charged battery.' },
+  // Armor items
+  woven_vest: { name: 'Woven Vest', icon: '\u{1F9E5}', color: 0xBBAA77, category: 'armor',
+    desc: 'A vest woven from cloth. Light protection.', defense: 3, durability: 80 },
+  reinforced_vest: { name: 'Reinforced Vest', icon: '\u{1F9E5}', color: 0x999988, category: 'armor',
+    desc: 'Cloth vest reinforced with scrap metal. Decent protection.', defense: 5, durability: 120 },
+  hide_armor: { name: 'Hide Armor', icon: '\u{1F9BE}', color: 0x6B4226, category: 'armor',
+    desc: 'Thick creature hide shaped into armor. Strong protection.', defense: 8, durability: 150 },
+  spirit_armor: { name: 'Spirit Armor', icon: '\u{1F6E1}\uFE0F', color: 0x8844FF, category: 'armor',
+    desc: 'Armor infused with dark essence. Superior protection with a faint glow.', defense: 12, durability: 200 },
+
   sacred_amulet: { name: 'Sacred Amulet', icon: '\u{1F4FF}', color: 0xFF8800, category: 'quest',
     desc: 'One of the three sacred relics.' },
   sacred_shell: { name: 'Sacred Shell', icon: '\u{1F41A}', color: 0xFF88CC, category: 'quest',

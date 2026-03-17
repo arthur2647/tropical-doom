@@ -113,6 +113,67 @@ export const RECIPES = [
       duration: 120
     }
   },
+  // Armor recipes
+  {
+    id: 'woven_vest',
+    name: 'Woven Vest',
+    icon: '\u{1F9E5}',
+    desc: 'A simple cloth vest. +3 Defense.',
+    materials: { cloth_rag: 4 },
+    result: {
+      type: 'armor',
+      armor: {
+        id: 'woven_vest', name: 'Woven Vest', icon: '\u{1F9E5}',
+        defense: 3, durability: 80, maxDurability: 80,
+        desc: 'A vest woven from cloth. Light protection.'
+      }
+    }
+  },
+  {
+    id: 'reinforced_vest',
+    name: 'Reinforced Vest',
+    icon: '\u{1F9E5}',
+    desc: 'Metal-reinforced cloth armor. +5 Defense.',
+    materials: { cloth_rag: 3, scrap_metal: 2 },
+    result: {
+      type: 'armor',
+      armor: {
+        id: 'reinforced_vest', name: 'Reinforced Vest', icon: '\u{1F9E5}',
+        defense: 5, durability: 120, maxDurability: 120,
+        desc: 'Cloth vest reinforced with scrap metal.'
+      }
+    }
+  },
+  {
+    id: 'hide_armor',
+    name: 'Hide Armor',
+    icon: '\u{1F9BE}',
+    desc: 'Tough creature hide armor. +8 Defense.',
+    materials: { thick_hide: 2, cloth_rag: 2 },
+    result: {
+      type: 'armor',
+      armor: {
+        id: 'hide_armor', name: 'Hide Armor', icon: '\u{1F9BE}',
+        defense: 8, durability: 150, maxDurability: 150,
+        desc: 'Thick creature hide shaped into armor.'
+      }
+    }
+  },
+  {
+    id: 'spirit_armor',
+    name: 'Spirit Armor',
+    icon: '\u{1F6E1}\uFE0F',
+    desc: 'Dark essence-infused armor. +12 Defense.',
+    materials: { dark_essence: 3, thick_hide: 2, sacred_crystal: 1 },
+    result: {
+      type: 'armor',
+      armor: {
+        id: 'spirit_armor', name: 'Spirit Armor', icon: '\u{1F6E1}\uFE0F',
+        defense: 12, durability: 200, maxDurability: 200,
+        desc: 'Armor infused with dark essence. Superior protection.'
+      }
+    }
+  },
 ];
 
 export class CraftingSystem {
@@ -149,6 +210,8 @@ export class CraftingSystem {
     // Give result
     if (recipe.result.type === 'weapon') {
       player.addWeapon({ ...recipe.result.weapon });
+    } else if (recipe.result.type === 'armor') {
+      player.equipArmor({ ...recipe.result.armor });
     } else if (recipe.result.type === 'consumable') {
       player.addItem(recipe.result.item, recipe.result.count);
       this.game.ui.addMessage(`Crafted ${recipe.name} x${recipe.result.count}`, 'loot');

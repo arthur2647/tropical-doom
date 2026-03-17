@@ -14,6 +14,7 @@ export class UIManager {
     document.getElementById('hud-top-left').style.display = d;
     document.getElementById('hud-top-right').style.display = d;
     document.getElementById('weapon-hud').style.display = d;
+    document.getElementById('skill-bar').style.display = visible ? 'flex' : 'none';
     document.getElementById('crosshair').style.display = d;
     document.getElementById('message-log').style.display = d;
   }
@@ -50,6 +51,9 @@ export class UIManager {
       document.getElementById('damage-overlay').style.opacity = Math.max(0, this.damageFlashTimer * 2);
     }
 
+    // Skill bar
+    this.updateSkillBar(p);
+
     // Clean old messages
     const now = Date.now();
     this.messages = this.messages.filter(m => now - m.time < 5000);
@@ -76,6 +80,33 @@ export class UIManager {
       const opacity = age > 0.7 ? 1 - (age - 0.7) / 0.3 : 1;
       return `<div class="msg msg-${m.type}" style="opacity:${opacity}">${m.text}</div>`;
     }).join('');
+  }
+
+  updateSkillBar(p) {
+    const bar = document.getElementById('skill-bar');
+    if (!bar) return;
+    bar.innerHTML = p.skills.map(s => {
+      const locked = !s.owned;
+      const onCD = !locked && s.cooldown > 0;
+      const cdPct = onCD ? (s.cooldown / s.maxCooldown * 100) : 0;
+      const cls = locked ? 'skill-slot locked' : onCD ? 'skill-slot cooldown' : 'skill-slot ready';
+      return `<div class="${cls}" data-skill="${s.id}" title="${locked ? `Buy from Espiritista (${s.cost}g)` : s.desc}">
+        <div class="skill-icon">${locked ? '\u{1F512}' : s.icon}</div>
+        <div class="skill-key">${s.key}</div>
+        ${onCD ? `<div class="skill-cd-overlay" style="height:${cdPct}%"></div>
+        <div class="skill-cd-text">${Math.ceil(s.cooldown)}s</div>` : ''}
+      </div>`;
+    }).join('');
+
+    // Update mobile touch skill buttons
+    for (let i = 0; i < p.skills.length; i++) {
+      const btn = document.getElementById(`touch-skill-${i}`);
+      if (btn) {
+        const s = p.skills[i];
+        btn.textContent = s.owned ? s.icon : '\u{1F512}';
+        btn.className = s.owned ? 'touch-skill-btn' : 'touch-skill-btn locked';
+      }
+    }
   }
 
   updateWeaponDisplay() {
@@ -161,9 +192,28 @@ export class UIManager {
       </div>`;
     }).join('') || '<div style="color:#555;font-size:12px;padding:8px">No materials</div>';
 
+    // Armor section
+    const armorEl = document.getElementById('inv-armor');
+    if (armorEl) {
+      if (p.armor) {
+        const durPct = Math.floor(p.armor.durability / p.armor.maxDurability * 100);
+        armorEl.innerHTML = `<div class="inv-slot equipped" id="armor-slot">
+          <div class="slot-icon">${p.armor.icon}</div>
+          <div class="slot-name">${p.armor.name}</div>
+          <div class="slot-count">+${p.armor.defense} DEF</div>
+        </div>`;
+        armorEl.querySelector('#armor-slot')?.addEventListener('click', () => {
+          p.unequipArmor();
+          this.renderInventory();
+        });
+      } else {
+        armorEl.innerHTML = '<div style="color:#555;font-size:12px;padding:8px">No armor equipped</div>';
+      }
+    }
+
     // Gold display
     const detailsEl = document.getElementById('inv-details');
-    detailsEl.innerHTML = `<h4>Gold: ${p.gold}</h4><p>Level ${p.level} | ATK: ${(p.attackPower * 100).toFixed(0)}% | DEF: ${p.defense}</p>`;
+    detailsEl.innerHTML = `<h4>Gold: ${p.gold}</h4><p>Level ${p.level} | ATK: ${(p.attackPower * 100).toFixed(0)}% | DEF: ${p.defense}${p.armor ? ` (${p.baseDefense}+${p.armor.defense})` : ''}</p>`;
 
     // Click handlers
     weaponsEl.querySelectorAll('.inv-slot').forEach(el => {

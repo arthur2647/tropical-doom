@@ -19,6 +19,26 @@ export class Player {
     this.materials = {};
     this.gold = 0;
 
+    // Armor
+    this.armor = null; // { id, name, icon, defense, durability, maxDurability, desc }
+    this.baseDefense = 0;
+
+    // Skills (must be purchased from Espiritista NPC — start locked)
+    this.skills = [
+      { id: 'battle_cry', name: 'Battle Cry', icon: '\u{1F4E2}', key: 'Q',
+        desc: 'Stun nearby enemies for 2 seconds.',
+        cooldown: 0, maxCooldown: 18, staminaCost: 15, cost: 25, owned: false },
+      { id: 'heal', name: 'Healing Wave', icon: '\u{1F49A}', key: 'F',
+        desc: 'Restore 35 HP instantly.',
+        cooldown: 0, maxCooldown: 22, staminaCost: 20, cost: 40, owned: false },
+      { id: 'fire_strike', name: 'Fire Strike', icon: '\u{1F525}', key: 'V',
+        desc: 'Blast nearby enemies with fire for 25 damage.',
+        cooldown: 0, maxCooldown: 28, staminaCost: 30, cost: 60, owned: false },
+      { id: 'shadow_step', name: 'Shadow Step', icon: '\u{1F300}', key: 'X',
+        desc: 'Become invincible and move faster for 3 seconds.',
+        cooldown: 0, maxCooldown: 40, staminaCost: 25, cost: 80, owned: false },
+    ];
+
     // Movement
     this.velocity = new THREE.Vector3();
     this.direction = new THREE.Vector3();
@@ -98,6 +118,104 @@ export class Player {
 
   hasItem(id, count = 1) {
     return (this.consumables[id] || 0) + (this.materials[id] || 0) >= count;
+  }
+
+  buySkill(skillId) {
+    const skill = this.skills.find(s => s.id === skillId);
+    if (!skill) return false;
+    if (skill.owned) {
+      this.game.ui.addMessage(`You already know ${skill.name}.`, 'system');
+      return false;
+    }
+    if (this.gold < skill.cost) {
+      this.game.ui.addMessage(`Not enough gold! ${skill.name} costs ${skill.cost} gold.`, 'system');
+      return false;
+    }
+    this.gold -= skill.cost;
+    skill.owned = true;
+    this.game.ui.addMessage(`Learned ${skill.name}! Press ${skill.key} to use it.`, 'quest');
+    this.game.audioManager.playQuestComplete();
+    return true;
+  }
+
+  equipArmor(armor) {
+    if (this.armor) this.unequipArmor();
+    this.armor = armor;
+    this.defense = this.baseDefense + armor.defense;
+    this.game.ui.addMessage(`Equipped ${armor.name} (+${armor.defense} DEF)`, 'loot');
+  }
+
+  unequipArmor() {
+    if (!this.armor) return;
+    this.defense = this.baseDefense;
+    this.game.ui.addMessage(`Unequipped ${this.armor.name}`, 'system');
+    this.armor = null;
+  }
+
+  useSkill(skillIdx) {
+    const skill = this.skills[skillIdx];
+    if (!skill || !skill.owned) {
+      this.game.ui.addMessage('Skill not learned! Visit the Espiritista to buy skills.', 'system');
+      return;
+    }
+    if (skill.cooldown > 0) {
+      this.game.ui.addMessage(`${skill.name} on cooldown (${Math.ceil(skill.cooldown)}s)`, 'system');
+      return;
+    }
+    if (this.stamina < skill.staminaCost) {
+      this.game.ui.addMessage('Not enough stamina!', 'system');
+      return;
+    }
+
+    this.stamina -= skill.staminaCost;
+    skill.cooldown = skill.maxCooldown;
+
+    switch (skill.id) {
+      case 'battle_cry': {
+        this.game.ui.addMessage('You let out a terrifying war cry!', 'combat');
+        this.game.audioManager.playNPCShout();
+        this.game.cameraShake = 0.4;
+        // Stun all enemies within 12 units for 2 seconds
+        const pos = this.game.camera.position;
+        for (const e of this.game.enemyManager.enemies) {
+          if (e.state === 'dead') continue;
+          const dx = e.model.position.x - pos.x;
+          const dz = e.model.position.z - pos.z;
+          if (Math.sqrt(dx * dx + dz * dz) < 12) {
+            e.stunTimer = 2;
+            e.state = 'idle';
+          }
+        }
+        break;
+      }
+      case 'heal': {
+        const healAmt = 35 + this.level * 3;
+        this.heal(healAmt);
+        this.game.ui.addMessage(`Healing Wave! +${healAmt} HP`, 'heal');
+        this.game.audioManager.playNPCHeal();
+        break;
+      }
+      case 'fire_strike': {
+        const dmg = 25 + this.level * 2;
+        this.game.ui.addMessage(`Fire Strike! ${dmg} damage to nearby enemies!`, 'combat');
+        this.game.audioManager.playHit();
+        this.game.cameraShake = 0.6;
+        this.game.enemyManager.aoeHit(this.game.camera.position, 8, dmg);
+        break;
+      }
+      case 'shadow_step': {
+        this.invincible = 3;
+        this.speed = 10;
+        this.sprintSpeed = 15;
+        this.game.ui.addMessage('Shadow Step! You move like a phantom...', 'quest');
+        setTimeout(() => {
+          this.speed = 6;
+          this.sprintSpeed = 10;
+          this.game.ui.addMessage('Shadow Step fades.', 'system');
+        }, 3000);
+        break;
+      }
+    }
   }
 
   getItemCategory(id) {
@@ -388,6 +506,11 @@ export class Player {
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
     if (this.invincible > 0) this.invincible -= dt;
 
+    // Skill cooldowns
+    for (const skill of this.skills) {
+      if (skill.cooldown > 0) skill.cooldown = Math.max(0, skill.cooldown - dt);
+    }
+
     // Weapon + camera bob
     const moving = this.direction.length() > 0 && this.onGround;
     if (this.weaponMesh) {
@@ -540,7 +663,8 @@ export class Player {
       this.maxStamina += 5;
       this.stamina = this.maxStamina;
       this.attackPower += 0.08;
-      this.defense += 1;
+      this.baseDefense += 1;
+      this.defense = this.baseDefense + (this.armor ? this.armor.defense : 0);
       this.game.ui.addMessage(`Level up! You are now level ${this.level}`, 'quest');
     }
     document.getElementById('level-display').textContent = `Level ${this.level}`;

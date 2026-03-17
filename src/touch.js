@@ -131,6 +131,17 @@ export class TouchControls {
       if (isInMenu()) { this.game.closeMenus(); return; }
       if (this.game.state === 2) this.game.pause();
     }, { passive: false });
+
+    // --- Skill buttons ---
+    for (let i = 0; i < 4; i++) {
+      const btn = document.getElementById(`touch-skill-${i}`);
+      if (btn) {
+        btn.addEventListener('touchstart', e => {
+          e.preventDefault();
+          if (this.game.state === 2) this.game.player.useSkill(i);
+        }, { passive: false });
+      }
+    }
   }
 
   updateJoystick(touch, rect, thumb) {

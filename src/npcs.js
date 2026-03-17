@@ -194,6 +194,42 @@ const NPC_DEFS = {
         ],
       }
     }
+  },
+  espiritista: {
+    name: 'Aling Rosa',
+    title: 'Espiritista',
+    position: [-65, 0, -55],
+    color: 0x6633AA,
+    hp: 60, damage: 12, attackRange: 6, attackSpeed: 1.5, zoneRadius: 20,
+    combatStyle: 'ranged',
+    callouts: {
+      enemySpotted: ['The spirits warn me... danger approaches!', 'I sense dark energy!'],
+      attacking: ['Begone, creature!', 'The spirits compel you!'],
+      playerHurt: ['Focus your energy!', 'Don\'t let the darkness in!'],
+      enemyKilled: ['Its spirit is at rest now.', 'Back to the void.'],
+      downed: ['The spirits... they fade...'],
+      revived: ['I feel the spirits returning...'],
+    },
+    dialogues: {
+      initial: {
+        speaker: 'Aling Rosa - Espiritista',
+        lines: [
+          'Ah, a survivor. I am Aling Rosa. The spirits told me someone would come.',
+          'I have been here at the temple since the darkness poured out. I can feel it pulsing.',
+          'I can teach you ancient skills — abilities channeled from the spirit world.',
+          'But such knowledge has a price. Bring me gold, and I will share my power with you.'
+        ],
+        onComplete: 'talk_espiritista',
+        next: 'shop'
+      },
+      shop: {
+        speaker: 'Aling Rosa - Espiritista',
+        lines: [
+          'Which power do you seek? I have much to teach...',
+        ],
+        shop: 'skills',
+      }
+    }
   }
 };
 
@@ -487,6 +523,63 @@ function createNPCModel(def) {
       const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.12), mL(0x333333));
       shoe.position.set(side*0.08, 0.02, 0.02);
       group.add(shoe);
+    }
+
+  } else if (def === NPC_DEFS.espiritista) {
+    // Aling Rosa - Espiritista, mystic elder woman with flowing robes
+    // Robe - deep purple, flowing
+    const robe = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.22, 0.8, 8), mL(0x4a2288));
+    robe.position.y = 0.6; robe.castShadow = true;
+    group.add(robe);
+    // Upper robe / shawl
+    const shawl = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.3, 0.22), mL(0x5533AA));
+    shawl.position.y = 1.0;
+    group.add(shawl);
+    // Head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), mL(skin));
+    head.position.set(0, 1.28, 0.02); head.scale.set(0.95, 1.05, 0.9);
+    group.add(head);
+    // White/grey hair in a bun
+    const hairTop = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), mL(0xaaaaaa));
+    hairTop.position.set(0, 1.33, -0.02); hairTop.scale.set(1, 0.7, 0.9);
+    group.add(hairTop);
+    const bun = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), mL(0x999999));
+    bun.position.set(0, 1.38, -0.12);
+    group.add(bun);
+    // Eyes - wise, narrowed
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 4), mL(0x221100));
+      eye.position.set(side*0.04, 1.3, 0.12);
+      group.add(eye);
+    }
+    // Mystical necklace/amulet
+    const amulet = new THREE.Mesh(new THREE.OctahedronGeometry(0.03, 0),
+      new THREE.MeshLambertMaterial({ color: 0xaa44ff, emissive: 0x6622cc, emissiveIntensity: 0.5 }));
+    amulet.position.set(0, 0.88, 0.12);
+    group.add(amulet);
+    // Arms with long sleeves
+    for (const side of [-1, 1]) {
+      const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.35, 0.1), mL(0x4a2288));
+      sleeve.position.set(side*0.24, 0.9, 0);
+      group.add(sleeve);
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(0.04, 5, 4), mL(skin));
+      hand.position.set(side*0.24, 0.7, 0);
+      hand.userData.isArm = true; hand.userData.side = side;
+      group.add(hand);
+    }
+    // Staff
+    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 1.2, 6), mL(0x3a2718));
+    staff.position.set(0.3, 0.8, 0);
+    group.add(staff);
+    const staffGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.04, 0),
+      new THREE.MeshLambertMaterial({ color: 0xcc66ff, emissive: 0x8833cc, emissiveIntensity: 0.6 }));
+    staffGem.position.set(0.3, 1.45, 0);
+    group.add(staffGem);
+    // Feet
+    for (const side of [-1, 1]) {
+      const sandal = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.14), mL(0x443322));
+      sandal.position.set(side*0.08, 0.02, 0.02);
+      group.add(sandal);
     }
 
   } else {
@@ -882,6 +975,17 @@ export class NPCManager {
 
   advanceDialogue() {
     if (!this.currentDialogue) return;
+
+    // If in skill shop, close it
+    if (this._inShop) {
+      this._inShop = false;
+      document.getElementById('dialogue-box').style.display = 'none';
+      this.currentDialogue = null;
+      this.game.state = 2; // PLAYING
+      if (!this.game.touch.enabled) this.game.controls.lock();
+      return;
+    }
+
     const { npc, npcId, dialogue } = this.currentDialogue;
     this.dialogueIndex++;
 
@@ -912,11 +1016,48 @@ export class NPCManager {
       }
       npc.talked = true;
 
+      // Open skill shop if dialogue has shop property
+      if (dialogue.shop === 'skills') {
+        this._inShop = true;
+        this.openSkillShop();
+        return;
+      }
+
       this.currentDialogue = null;
       this.game.state = 2; // PLAYING
       if (!this.game.touch.enabled) this.game.controls.lock();
     } else {
       this.showDialogueLine();
     }
+  }
+
+  openSkillShop() {
+    const box = document.getElementById('dialogue-box');
+    const player = this.game.player;
+    document.getElementById('dialogue-speaker').textContent = 'Aling Rosa - Skill Shop';
+    document.getElementById('dialogue-text').textContent = `Your gold: ${player.gold}`;
+    document.getElementById('dialogue-continue').textContent = 'Click or press E to leave';
+
+    const optEl = document.getElementById('dialogue-options');
+    optEl.innerHTML = player.skills.map(s => {
+      if (s.owned) {
+        return `<div class="dial-opt" style="opacity:0.4;cursor:default">${s.icon} ${s.name} — LEARNED</div>`;
+      }
+      const canAfford = player.gold >= s.cost;
+      const color = canAfford ? '' : 'opacity:0.5;';
+      return `<div class="dial-opt skill-buy" style="${color}" data-skill="${s.id}">
+        ${s.icon} ${s.name} — ${s.cost} gold<br>
+        <span style="font-size:11px;color:#998877">${s.desc}</span>
+      </div>`;
+    }).join('');
+
+    optEl.querySelectorAll('.skill-buy').forEach(el => {
+      el.addEventListener('click', () => {
+        const skillId = el.dataset.skill;
+        if (player.buySkill(skillId)) {
+          this.openSkillShop(); // Refresh the shop UI
+        }
+      });
+    });
   }
 }

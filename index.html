@@ -54,6 +54,19 @@ canvas{display:block}
 #level-display{font-size:14px;color:#ffcc44}
 #location-display{font-size:12px;color:#aa8855;margin-top:2px}
 
+/* Skill Bar */
+#skill-bar{position:fixed;bottom:55px;left:50%;transform:translateX(-50%);z-index:10;pointer-events:none;
+  display:flex;gap:6px}
+.skill-slot{width:48px;height:48px;background:rgba(0,0,0,0.6);border:1px solid #3a2a18;border-radius:4px;
+  position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.skill-slot.ready{border-color:rgba(255,136,0,0.5)}
+.skill-slot.cooldown{border-color:#333;opacity:0.7}
+.skill-slot.locked{border-color:#222;opacity:0.3}
+.skill-icon{font-size:20px;line-height:1}
+.skill-key{font-size:9px;color:#aa8855;position:absolute;bottom:2px;right:4px;letter-spacing:0}
+.skill-cd-overlay{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);border-radius:0 0 3px 3px}
+.skill-cd-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:11px;color:#ff8833;font-weight:600}
+
 #weapon-hud{position:fixed;bottom:55px;right:16px;z-index:10;pointer-events:none;text-align:right;display:none}
 #weapon-name-display{font-size:18px;color:#fff;text-shadow:0 1px 4px #000}
 #weapon-durability{font-size:11px;color:#aaa;margin-top:2px}
@@ -191,6 +204,13 @@ canvas{display:block}
 
 #touch-look-zone{position:absolute;top:0;right:0;width:55%;height:70%;pointer-events:auto;touch-action:none}
 
+#touch-skill-btns{position:absolute;bottom:110px;left:20px;display:flex;gap:6px;pointer-events:auto;touch-action:none}
+.touch-skill-btn{width:44px;height:44px;border-radius:50%;background:rgba(100,50,200,0.3);border:2px solid rgba(150,80,255,0.4);
+  display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;
+  -webkit-tap-highlight-color:transparent;user-select:none}
+.touch-skill-btn:active{background:rgba(100,50,200,0.6)}
+.touch-skill-btn.locked{opacity:0.3}
+
 /* Tutorial */
 #tutorial-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,0.75);display:none;
   align-items:center;justify-content:center;pointer-events:auto}
@@ -220,6 +240,7 @@ canvas{display:block}
   #interact-prompt{bottom:200px!important}
   #inv-content,#quest-content,#craft-content{margin:20px 10px!important;padding:10px!important}
   #dialogue-box{width:90vw!important;bottom:160px!important}
+  #skill-bar{display:none!important}
 }
 </style>
 </head>
@@ -268,6 +289,8 @@ canvas{display:block}
   <div id="weapon-durability">Durability: 100%</div>
 </div>
 
+<div id="skill-bar"></div>
+
 <div id="crosshair"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2" fill="none" stroke="white" stroke-width="1"/><line x1="12" y1="4" x2="12" y2="9" stroke="white" stroke-width="1"/><line x1="12" y1="15" x2="12" y2="20" stroke="white" stroke-width="1"/><line x1="4" y1="12" x2="9" y2="12" stroke="white" stroke-width="1"/><line x1="15" y1="12" x2="20" y2="12" stroke="white" stroke-width="1"/></svg></div>
 
 <div id="damage-overlay"></div>
@@ -284,6 +307,12 @@ canvas{display:block}
     <div class="touch-btn touch-btn-attack" id="touch-attack">ATK</div>
     <div class="touch-btn touch-btn-heavy" id="touch-heavy">HVY</div>
   </div>
+  <div id="touch-skill-btns">
+    <div class="touch-skill-btn" id="touch-skill-0" data-skill="0">\u{1F512}</div>
+    <div class="touch-skill-btn" id="touch-skill-1" data-skill="1">\u{1F512}</div>
+    <div class="touch-skill-btn" id="touch-skill-2" data-skill="2">\u{1F512}</div>
+    <div class="touch-skill-btn" id="touch-skill-3" data-skill="3">\u{1F512}</div>
+  </div>
   <div id="touch-menu-btns">
     <div class="touch-menu-btn" id="touch-inv">ITEMS</div>
     <div class="touch-menu-btn" id="touch-quest">QUESTS</div>
@@ -298,6 +327,7 @@ canvas{display:block}
     <div class="menu-close-btn" id="inv-close">&times; CLOSE</div>
     <h2>INVENTORY</h2>
     <div class="inv-section"><h3>WEAPONS</h3><div class="inv-grid" id="inv-weapons"></div></div>
+    <div class="inv-section"><h3>ARMOR</h3><div class="inv-grid" id="inv-armor"></div></div>
     <div class="inv-section"><h3>CONSUMABLES</h3><div class="inv-grid" id="inv-consumables"></div></div>
     <div class="inv-section"><h3>MATERIALS</h3><div class="inv-grid" id="inv-materials"></div></div>
     <div id="inv-details"></div>
