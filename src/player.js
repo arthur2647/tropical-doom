@@ -323,15 +323,15 @@ export class Player {
         break;
       }
       case 'kitchen_knife': {
-        // Triangular blade
+        // Triangular blade — extends upward from guard
         const shape = new THREE.Shape();
-        shape.moveTo(0, 0); shape.lineTo(0.035, -0.22); shape.lineTo(-0.005, -0.25); shape.lineTo(-0.005, 0);
+        shape.moveTo(0, 0); shape.lineTo(0.035, 0.22); shape.lineTo(-0.005, 0.25); shape.lineTo(-0.005, 0);
         add(new THREE.ExtrudeGeometry(shape, { depth: 0.004, bevelEnabled: false }), std(0xCCCCCC, 0.8, 0.2), [0, 0, -0.002]);
         // Guard
-        add(new THREE.BoxGeometry(0.05, 0.012, 0.014), std(0x888888, 0.5), [0, 0.01, 0]);
-        // Handle with rivets
-        add(new THREE.BoxGeometry(0.028, 0.13, 0.016), std(0x1a0a00), [0, 0.08, 0]);
-        for (const dy of [0.04, 0.1]) add(new THREE.SphereGeometry(0.004, 4, 4), std(0x999999), [0, dy, 0.01]);
+        add(new THREE.BoxGeometry(0.05, 0.012, 0.014), std(0x888888, 0.5), [0, -0.01, 0]);
+        // Handle with rivets — below guard (where the hand grips)
+        add(new THREE.BoxGeometry(0.028, 0.13, 0.016), std(0x1a0a00), [0, -0.08, 0]);
+        for (const dy of [-0.04, -0.1]) add(new THREE.SphereGeometry(0.004, 4, 4), std(0x999999), [0, dy, 0.01]);
         break;
       }
       case 'bolo': {
