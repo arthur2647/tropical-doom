@@ -1038,16 +1038,16 @@ function buildResort(game) {
   const signPost = addCylinder(game, 20, gY + 1, 10, 0.05, 0.06, 2, 0x6B4226);
   const signBoard = addBox(game, 20, gY + 2, 10, 1.5, 0.4, 0.08, 0xD4A556, { collider: false });
 
-  // Beach lounge chair for sleeping (near pool)
-  const loungeY = gY;
+  // Beach lounge chair for sleeping (beside pool)
+  const loungeY = getTerrainHeightFast(13, 5);
   // Chair frame
-  addBox(game, 5, loungeY + 0.3, 10, 0.7, 0.08, 2.0, 0x6B4226, { collider: false });
+  addBox(game, 13, loungeY + 0.3, 5, 0.7, 0.08, 2.0, 0x6B4226, { collider: false });
   // Raised back rest
-  addBox(game, 5, loungeY + 0.55, 10.8, 0.65, 0.4, 0.08, 0x6B4226, { collider: false });
+  addBox(game, 13, loungeY + 0.55, 5.8, 0.65, 0.4, 0.08, 0x6B4226, { collider: false });
   // Cushion
-  const loungeCushion = addBox(game, 5, loungeY + 0.38, 10, 0.6, 0.06, 1.8, 0x7799AA, { collider: false });
+  const loungeCushion = addBox(game, 13, loungeY + 0.38, 5, 0.6, 0.06, 1.8, 0x7799AA, { collider: false });
   // Small pillow
-  addBox(game, 5, loungeY + 0.45, 10.6, 0.4, 0.08, 0.3, 0xCCBBAA, { collider: false });
+  addBox(game, 13, loungeY + 0.45, 5.6, 0.4, 0.08, 0.3, 0xCCBBAA, { collider: false });
   loungeCushion.userData = {
     interactable: true,
     type: 'bed',
