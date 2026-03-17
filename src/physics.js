@@ -113,9 +113,9 @@ export class PhysicsWorld {
     this.playerBody = new CANNON.Body({
       mass: 75,
       material: this.playerMat,
-      shape: new CANNON.Sphere(0.35),
-      position: new CANNON.Vec3(cam.position.x, cam.position.y - 1.35, cam.position.z),
-      linearDamping: 0.05,
+      shape: new CANNON.Sphere(0.45),
+      position: new CANNON.Vec3(cam.position.x, cam.position.y - 1.25, cam.position.z),
+      linearDamping: 0.1,
       angularDamping: 1.0,
       fixedRotation: true,
     });
@@ -227,7 +227,7 @@ export class PhysicsWorld {
       const m = this.playerBody.mass;
       this.playerBody.force.y -= g.y * m; // cancel world gravity
       // Keep cannon body Y synced to camera (game controls Y via terrain + gravity)
-      this.playerBody.position.y = this.game.camera.position.y - 1.35;
+      this.playerBody.position.y = this.game.camera.position.y - 1.25;
       this.playerBody.velocity.y = 0;
     }
 
@@ -279,7 +279,7 @@ export class PhysicsWorld {
 
   setPlayerPosition(x, y, z) {
     if (!this.playerBody) return;
-    this.playerBody.position.set(x, y - 1.35, z);
+    this.playerBody.position.set(x, y - 1.25, z);
     this.playerBody.velocity.set(0, 0, 0);
   }
 }

@@ -189,6 +189,7 @@ canvas{display:block;touch-action:none}
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:none}
 
 #touch-buttons{position:absolute;bottom:30px;right:20px;display:flex;gap:12px;pointer-events:auto;touch-action:none}
+#touch-jump{position:absolute;bottom:110px;right:100px;pointer-events:auto;touch-action:none}
 .touch-btn{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:600;letter-spacing:1px;color:#fff;text-shadow:0 1px 2px #000;
   -webkit-tap-highlight-color:transparent;user-select:none}
@@ -305,8 +306,8 @@ canvas{display:block;touch-action:none}
     <div id="joystick-base"><div id="joystick-thumb"></div></div>
   </div>
   <div id="touch-look-zone"></div>
+  <div class="touch-btn touch-btn-jump" id="touch-jump">JUMP</div>
   <div id="touch-buttons">
-    <div class="touch-btn touch-btn-jump" id="touch-jump">JUMP</div>
     <div class="touch-btn touch-btn-interact" id="touch-interact">USE</div>
     <div class="touch-btn touch-btn-attack" id="touch-attack">ATK</div>
     <div class="touch-btn touch-btn-heavy" id="touch-heavy">HVY</div>

@@ -204,8 +204,8 @@ export class TouchControls {
       // Horizontal rotation (yaw) — matches PointerLockControls convention
       camera.rotation.y -= this.lookDelta.x * sensitivity;
 
-      // Vertical rotation (pitch) — swipe down = look down, clamp to avoid flipping
-      camera.rotation.x -= this.lookDelta.y * sensitivity;
+      // Vertical rotation (pitch) — swipe up = look up, clamp to avoid flipping
+      camera.rotation.x += this.lookDelta.y * sensitivity;
       camera.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, camera.rotation.x));
 
       this.lookDelta.x = 0;
