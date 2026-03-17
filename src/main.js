@@ -348,14 +348,14 @@ class Game {
         this.camera.updateProjectionMatrix();
       }
 
-      // --- Camera shake (from hits) ---
+      // --- Camera shake (applied to weapon mesh only to avoid PointerLockControls conflict) ---
       if (this.cameraShake > 0) {
         this.cameraShake *= (1 - dt * 8);
-        this.camera.rotation.z += (Math.random() - 0.5) * this.cameraShake * 0.04;
-        this.camera.rotation.x += (Math.random() - 0.5) * this.cameraShake * 0.02;
-      } else {
-        // Gently return z rotation to 0
-        this.camera.rotation.z *= 0.9;
+        if (this.cameraShake < 0.01) this.cameraShake = 0;
+        if (this.player.weaponMesh) {
+          this.player.weaponMesh.position.x += (Math.random() - 0.5) * this.cameraShake * 0.08;
+          this.player.weaponMesh.position.y += (Math.random() - 0.5) * this.cameraShake * 0.06;
+        }
       }
 
       // --- Idle breathing sway ---
