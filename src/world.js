@@ -1296,7 +1296,7 @@ function placeDestructibles(game) {
   ]);
 
   // Swamp area
-  const sx = 40, sz = -50;
+  const sx = 40, sz = 70;
   addBarrel(sx + 5, sz + 3, 0x445533, [
     { id: 'antidote', chance: 0.5 }, { id: 'herbs', chance: 0.6 }
   ]);

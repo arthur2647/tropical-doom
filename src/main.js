@@ -125,6 +125,7 @@ class Game {
     this.interactables = [];
     this.destructibles = [];
     this._debrisParticles = []; // active debris effects
+    this._meleeDir2d = new THREE.Vector3(); // reused in damageDestructibleMelee
 
     // Tutorial system
     this.tutorial = {
@@ -655,9 +656,8 @@ class Game {
   }
 
   damageDestructibleMelee(origin, direction, range, damage) {
-    const dir2d = direction.clone();
-    dir2d.y = 0;
-    dir2d.normalize();
+    const dir2d = this._meleeDir2d;
+    dir2d.set(direction.x, 0, direction.z).normalize();
     for (let i = this.destructibles.length - 1; i >= 0; i--) {
       const d = this.destructibles[i];
       const dx = d.mesh.position.x - origin.x;
@@ -767,8 +767,10 @@ class Game {
         piece.rotation.x += rv.x * dt;
         piece.rotation.y += rv.y * dt;
         piece.rotation.z += rv.z * dt;
-        if (piece.material) piece.material.opacity = fade;
-        if (piece.material && !piece.material.transparent) piece.material.transparent = true;
+        if (piece.material) {
+          if (!piece.material.transparent) piece.material.transparent = true;
+          piece.material.opacity = fade;
+        }
       }
     }
   }

@@ -53,6 +53,7 @@ export class Player {
     this._move = new THREE.Vector3();
     this._newPos = new THREE.Vector3();
     this._slidePos = new THREE.Vector3();
+    this._attackDir = new THREE.Vector3();
     // Pre-allocated collision objects
     this._collisionBox = new THREE.Box3();
     this._collisionCenter = new THREE.Vector3();
@@ -644,10 +645,11 @@ export class Player {
 
     // Hit detection
     const cam = this.game.camera;
+    cam.getWorldDirection(this._attackDir);
     if (w.type === 'melee') {
-      this.game.enemyManager.meleeHit(cam.position, cam.getWorldDirection(new THREE.Vector3()), w.range, finalDmg);
+      this.game.enemyManager.meleeHit(cam.position, this._attackDir, w.range, finalDmg);
     } else {
-      this.game.enemyManager.rangedHit(cam.position, cam.getWorldDirection(new THREE.Vector3()), w.range, finalDmg);
+      this.game.enemyManager.rangedHit(cam.position, this._attackDir, w.range, finalDmg);
     }
   }
 

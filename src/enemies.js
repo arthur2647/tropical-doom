@@ -911,6 +911,9 @@ export class EnemyManager {
     this.spawnTimer = 0;
     this.maxEnemies = 20;
     this.difficulty = 1;
+    // Pre-allocated vectors for melee hit detection
+    this._toEnemy = new THREE.Vector3();
+    this._meleeDir = new THREE.Vector3();
   }
 
   spawnInitial() {
@@ -1153,19 +1156,17 @@ export class EnemyManager {
 
   meleeHit(origin, direction, range, damage) {
     let hit = false;
+    this._meleeDir.set(direction.x, 0, direction.z).normalize();
     for (const e of this.enemies) {
       if (e.state === 'dead') continue;
-      const toEnemy = e.model.position.clone().sub(origin);
-      toEnemy.y = 0;
-      const dist = toEnemy.length();
+      this._toEnemy.copy(e.model.position).sub(origin);
+      this._toEnemy.y = 0;
+      const dist = this._toEnemy.length();
       if (dist > range) continue;
 
       // Check angle
-      const dir2d = direction.clone();
-      dir2d.y = 0;
-      dir2d.normalize();
-      toEnemy.normalize();
-      const dot = dir2d.dot(toEnemy);
+      this._toEnemy.normalize();
+      const dot = this._meleeDir.dot(this._toEnemy);
       if (dot < 0.5) continue; // ~60 degree cone
 
       this.damageEnemy(e, damage);
