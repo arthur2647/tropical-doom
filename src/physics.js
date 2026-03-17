@@ -66,6 +66,10 @@ export class PhysicsWorld {
       material: this.groundMat,
       shape: heightfield,
     });
+    // Terrain in group 8 — player doesn't collide with it (Y managed by game),
+    // but debris still collides with it via group 1 mask
+    terrainBody.collisionFilterGroup = 8;
+    terrainBody.collisionFilterMask = 4; // only collide with debris
     // Heightfield is in XZ, cannon uses XY for heightfield, so rotate
     terrainBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
     terrainBody.position.set(-half, 0, half);
@@ -187,7 +191,7 @@ export class PhysicsWorld {
       );
 
       body.collisionFilterGroup = 4;
-      body.collisionFilterMask = 1; // only collide with static
+      body.collisionFilterMask = 1 | 8; // collide with walls + terrain
       body.allowSleep = true;
       body.sleepSpeedLimit = 0.3;
       body.sleepTimeLimit = 2;
