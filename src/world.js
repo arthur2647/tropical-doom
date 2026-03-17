@@ -1194,11 +1194,20 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
   const stairZ = z + 1.75;
   const numSteps = 4;
   const stairDepth = 1.8; // total depth of staircase
+  // Get terrain height at the bottom of the stairs so supports reach the ground
+  const bottomStepZ = stairZ + stairDepth;
+  const groundAtBottom = getTerrainHeightFast(x, bottomStepZ);
   for (let s = 0; s < numSteps; s++) {
     const stepH = y + (stiltH / numSteps) * (s + 1);
     const stepZ = stairZ + stairDepth - s * (stairDepth / numSteps); // bottom step farthest
     // Visual step
     addBox(game, x, stepH - 0.08, stepZ, stairWidth, 0.15, 0.5, 0x7B5B3A, { collider: false });
+    // Support post under each step reaching to ground
+    const stepGround = getTerrainHeightFast(x, stepZ);
+    const postH = stepH - 0.15 - stepGround;
+    if (postH > 0.2) {
+      addCylinder(game, x, stepGround + postH / 2, stepZ, 0.05, 0.06, postH, 0x5C4033, { collider: false });
+    }
     // Walkable platform for this step
     game.platforms.push({
       minX: x - stairWidth / 2, maxX: x + stairWidth / 2,
@@ -1206,9 +1215,24 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
       top: stepH
     });
   }
-  // Stair railings (visual)
+  // Stair stringers (diagonal beams on each side, from ground at bottom to hut floor)
   for (const side of [-stairWidth / 2 - 0.05, stairWidth / 2 + 0.05]) {
-    addCylinder(game, x + side, y + stiltH / 2 + 0.3, stairZ + stairDepth / 2, 0.03, 0.03, stairDepth, 0x5C4033, { collider: false });
+    // Railing post at top
+    addCylinder(game, x + side, y + stiltH + 0.4, stairZ + 0.1, 0.03, 0.03, 0.8, 0x5C4033, { collider: false });
+    // Railing post at bottom
+    const botGy = getTerrainHeightFast(x + side, bottomStepZ);
+    const botPostH = (y + stiltH / numSteps) - botGy + 0.6;
+    addCylinder(game, x + side, botGy + botPostH / 2, bottomStepZ, 0.03, 0.03, botPostH, 0x5C4033, { collider: false });
+    // Diagonal stringer beam connecting top to bottom
+    const stringerLen = Math.sqrt(stairDepth * stairDepth + stiltH * stiltH);
+    const stringerAngle = Math.atan2(stiltH, stairDepth);
+    const stringer = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.06, stringerLen),
+      new THREE.MeshLambertMaterial({ color: 0x5C4033 })
+    );
+    stringer.position.set(x + side, y + stiltH / 2, stairZ + stairDepth / 2);
+    stringer.rotation.x = stringerAngle;
+    game.scene.add(stringer);
   }
   // Stair side wall colliders (prevent walking through from sides)
   const halfW = stairWidth / 2;
