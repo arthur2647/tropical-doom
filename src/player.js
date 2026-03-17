@@ -247,10 +247,10 @@ export class Player {
       this.consumables[id]--;
       if (this.consumables[id] <= 0) delete this.consumables[id];
       this.game.ui.addMessage('You throw a Molotov cocktail!', 'combat');
-      const pos = this.game.camera.position;
-      const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.game.camera.quaternion);
-      const hitPos = pos.clone().add(dir.multiplyScalar(5));
-      this.game.enemyManager.aoeHit(hitPos, 6, 35);
+      const cam = this.game.camera;
+      this._attackDir.set(0, 0, -1).applyQuaternion(cam.quaternion);
+      this._newPos.copy(cam.position).addScaledVector(this._attackDir, 5);
+      this.game.enemyManager.aoeHit(this._newPos, 6, 35);
       return;
     }
     this.consumables[id]--;

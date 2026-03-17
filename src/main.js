@@ -900,6 +900,7 @@ class Game {
       const e = this.enemyManager.enemies[i];
       if (e.state !== 'dead') {
         this.scene.remove(e.model);
+        if (this.physics) this.physics.removeEnemyBody(e);
         this.enemyManager.enemies.splice(i, 1);
       }
     }
