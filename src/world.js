@@ -726,8 +726,12 @@ function addBox(game, x, y, z, w, h, d, color, opts = {}) {
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, y, z);
   if (opts.rotY) mesh.rotation.y = opts.rotY;
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
+  if (opts.invisible) {
+    mesh.visible = false;
+  } else {
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+  }
   game.scene.add(mesh);
 
   if (opts.collider !== false) {
@@ -937,7 +941,7 @@ function buildVillage(game) {
     const hx = ox + Math.cos(angle) * r;
     const hz = oz + Math.sin(angle) * r;
     const gy = getTerrainHeightFast(hx, hz);
-    buildNipaHut(game, hx, gy, hz, i === 0); // first hut has a bed
+    buildNipaHut(game, hx, gy, hz, true); // all huts have beds
   }
   // Fire pit with particle flames
   const gy = getTerrainHeightFast(ox, oz);
@@ -1000,10 +1004,25 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
   for (const [dx, dz] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) {
     addCylinder(game, x + dx, y + stiltH / 2, z + dz, 0.08, 0.1, stiltH, 0x5C4033);
   }
+  // Floor (visual only)
   addBox(game, x, y + stiltH, z, 3.5, 0.15, 3.5, 0x8B7355, { collider: false });
+
+  // Walls — visual meshes are non-collider so player can walk inside
+  // Back wall
   addBox(game, x, y + stiltH + 1.2, z - 1.7, 3.2, 2.2, 0.15, 0x9B8B60, { collider: false });
+  // Left wall
   addBox(game, x - 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60, { collider: false });
+  // Right wall
   addBox(game, x + 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60, { collider: false });
+
+  // Invisible collider walls at ground level to prevent walking through the hut
+  // Back
+  addBox(game, x, y + 0.75, z - 1.7, 3.5, 1.5, 0.15, 0x000000, { invisible: true });
+  // Left
+  addBox(game, x - 1.7, y + 0.75, z, 0.15, 1.5, 3.5, 0x000000, { invisible: true });
+  // Right
+  addBox(game, x + 1.7, y + 0.75, z, 0.15, 1.5, 3.5, 0x000000, { invisible: true });
+
   const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 2, 4), getMat(0x8B7B45));
   roof.position.set(x, y + stiltH + 3.3, z);
   roof.rotation.y = Math.PI / 4;
