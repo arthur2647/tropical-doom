@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { createWorld, REGIONS, updateMinimap, updateEnvironment } from './world.js';
 import { Player } from './player.js';
 import { EnemyManager } from './enemies.js';
@@ -40,6 +43,17 @@ class Game {
     this.renderer.toneMappingExposure = 1.0;
     document.body.prepend(this.renderer.domElement);
 
+    // Post-processing
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.3, // strength - subtle bloom
+      0.6, // radius
+      0.85  // threshold - only bright things bloom
+    );
+    this.composer.addPass(this.bloomPass);
+
     // Controls
     this.controls = new PointerLockControls(this.camera, document.body);
     this.keys = {};
@@ -74,6 +88,11 @@ class Game {
     document.getElementById('death-restart').addEventListener('click', () => location.reload());
     document.getElementById('pause-resume').addEventListener('click', () => this.resume());
     document.getElementById('pause-restart').addEventListener('click', () => location.reload());
+
+    // Menu close buttons (critical for mobile)
+    document.getElementById('inv-close').addEventListener('click', () => this.closeMenus());
+    document.getElementById('quest-close').addEventListener('click', () => this.closeMenus());
+    document.getElementById('craft-close').addEventListener('click', () => this.closeMenus());
 
     // Pointer lock
     this.controls.addEventListener('lock', () => {
@@ -133,6 +152,7 @@ class Game {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.composer.setSize(window.innerWidth, window.innerHeight);
     });
   }
 
@@ -274,7 +294,18 @@ class Game {
       updateMinimap(this);
     }
 
-    this.renderer.render(this.scene, this.camera);
+    // Shadow camera follows player for better shadow quality nearby
+    if (this.sunLight && this.state === GameState.PLAYING) {
+      this.sunLight.target.position.copy(this.camera.position);
+      this.sunLight.target.updateMatrixWorld();
+    }
+
+    // Bloom intensity adjusts with time of day
+    if (this.bloomPass) {
+      this.bloomPass.strength = this.isNight ? 0.5 : 0.25;
+    }
+
+    this.composer.render();
   }
 
   updateDayNight(dt) {
@@ -512,6 +543,7 @@ class Game {
     this.ui.showInventory(false);
     this.ui.showQuestLog(false);
     this.ui.showCrafting(false);
+    document.getElementById('pause-screen').style.display = 'none';
     if (!this.touch.enabled) this.controls.lock();
   }
 

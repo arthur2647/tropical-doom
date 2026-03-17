@@ -109,14 +109,17 @@ export function createWorld(game) {
   game.sunLight = new THREE.DirectionalLight(0xfff0d0, 2.0);
   game.sunLight.position.set(50, 80, 50);
   game.sunLight.castShadow = true;
-  game.sunLight.shadow.mapSize.set(1024, 1024); // Halved
-  game.sunLight.shadow.camera.left = -60;
-  game.sunLight.shadow.camera.right = 60;
-  game.sunLight.shadow.camera.top = 60;
-  game.sunLight.shadow.camera.bottom = -60;
-  game.sunLight.shadow.camera.far = 150;
-  game.sunLight.shadow.bias = -0.002;
+  game.sunLight.shadow.mapSize.set(2048, 2048);
+  game.sunLight.shadow.camera.left = -40;
+  game.sunLight.shadow.camera.right = 40;
+  game.sunLight.shadow.camera.top = 40;
+  game.sunLight.shadow.camera.bottom = -40;
+  game.sunLight.shadow.camera.near = 10;
+  game.sunLight.shadow.camera.far = 200;
+  game.sunLight.shadow.bias = -0.001;
+  game.sunLight.shadow.normalBias = 0.02;
   scene.add(game.sunLight);
+  scene.add(game.sunLight.target);
 
   const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x3a5f0b, 0.5);
   scene.add(hemiLight);
@@ -154,11 +157,15 @@ export function createWorld(game) {
   // Build height cache AFTER terrain is created
   buildHeightGrid();
 
-  // Water - animated with vertex displacement
+  // Water - animated with vertex displacement, reflective surface
   const waterGeo = new THREE.PlaneGeometry(500, 500, 40, 40);
   const water = new THREE.Mesh(
     waterGeo,
-    new THREE.MeshLambertMaterial({ color: 0x1188aa, transparent: true, opacity: 0.6 })
+    new THREE.MeshStandardMaterial({
+      color: 0x0e6677, transparent: true, opacity: 0.65,
+      metalness: 0.3, roughness: 0.2,
+      envMapIntensity: 0.5
+    })
   );
   water.rotation.x = -Math.PI / 2;
   water.position.y = -0.8;

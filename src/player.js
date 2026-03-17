@@ -279,15 +279,38 @@ export class Player {
   update(dt) {
     const cam = this.game.camera;
     const keys = this.game.keys;
-    const sprinting = keys['ShiftLeft'] && this.stamina > 0;
-    const moveSpeed = sprinting ? this.sprintSpeed : this.speed;
+    const sprinting = keys['ShiftLeft'] && this.stamina > 10;
+    const exhausted = this.stamina < this.maxStamina * 0.1;
+
+    // Movement speed affected by stamina
+    let moveSpeed;
+    if (sprinting) {
+      moveSpeed = this.sprintSpeed;
+    } else if (exhausted) {
+      // Exhausted: reduced to 60% walk speed
+      moveSpeed = this.speed * 0.6;
+    } else {
+      moveSpeed = this.speed;
+    }
 
     // Stamina regen/drain
     if (sprinting && (keys['KeyW'] || keys['KeyA'] || keys['KeyS'] || keys['KeyD'])) {
       this.stamina = Math.max(0, this.stamina - 20 * dt);
     } else {
-      this.stamina = Math.min(this.maxStamina, this.stamina + 15 * dt);
+      // Regen slower when exhausted (recovery penalty)
+      const regenRate = exhausted ? 8 : 15;
+      this.stamina = Math.min(this.maxStamina, this.stamina + regenRate * dt);
     }
+
+    // Exhaustion visual + message
+    const staminaOverlay = document.getElementById('stamina-overlay');
+    if (staminaOverlay) {
+      staminaOverlay.style.opacity = exhausted ? 0.6 : 0;
+    }
+    if (exhausted && !this._wasExhausted) {
+      this.game.ui.addMessage('You\'re exhausted! Movement slowed...', 'system');
+    }
+    this._wasExhausted = exhausted;
 
     // Movement
     this.direction.set(0, 0, 0);

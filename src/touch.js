@@ -104,29 +104,32 @@ export class TouchControls {
       if (this.game.state === 7) this.game.npcManager.advanceDialogue(); // dialogue
     }, { passive: false });
 
-    // --- Menu buttons ---
+    // --- Menu buttons (close any open menu first, then open requested one) ---
+    const isInMenu = () => [3, 4, 5, 6].includes(this.game.state);
+
     document.getElementById('touch-inv').addEventListener('touchstart', e => {
       e.preventDefault();
+      if (isInMenu()) { this.game.closeMenus(); return; }
       if (this.game.state === 2) this.game.openInventory();
-      else if (this.game.state === 4) this.game.closeMenus();
     }, { passive: false });
 
     document.getElementById('touch-quest').addEventListener('touchstart', e => {
       e.preventDefault();
+      if (isInMenu()) { this.game.closeMenus(); return; }
       if (this.game.state === 2) this.game.openQuestLog();
-      else if (this.game.state === 5) this.game.closeMenus();
     }, { passive: false });
 
     document.getElementById('touch-craft').addEventListener('touchstart', e => {
       e.preventDefault();
+      if (isInMenu()) { this.game.closeMenus(); return; }
       if (this.game.state === 2) this.game.openCrafting();
-      else if (this.game.state === 6) this.game.closeMenus();
     }, { passive: false });
 
     document.getElementById('touch-pause').addEventListener('touchstart', e => {
       e.preventDefault();
+      if (this.game.state === 3) { this.game.resume(); return; }
+      if (isInMenu()) { this.game.closeMenus(); return; }
       if (this.game.state === 2) this.game.pause();
-      else if (this.game.state === 3) this.game.resume();
     }, { passive: false });
   }
 

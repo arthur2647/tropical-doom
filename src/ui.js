@@ -26,10 +26,18 @@ export class UIManager {
     document.getElementById('hp-bar').style.width = hpPct + '%';
     document.getElementById('hp-val').textContent = Math.ceil(p.hp);
 
-    // Stamina bar
+    // Stamina bar - changes color when low
     const staPct = (p.stamina / p.maxStamina * 100).toFixed(0);
-    document.getElementById('sta-bar').style.width = staPct + '%';
+    const staBar = document.getElementById('sta-bar');
+    staBar.style.width = staPct + '%';
     document.getElementById('sta-val').textContent = Math.ceil(p.stamina);
+    if (p.stamina < p.maxStamina * 0.1) {
+      staBar.style.background = 'linear-gradient(90deg,#aa4400,#ff6633)';
+    } else if (p.stamina < p.maxStamina * 0.3) {
+      staBar.style.background = 'linear-gradient(90deg,#aaaa00,#ffff33)';
+    } else {
+      staBar.style.background = '';
+    }
 
     // XP bar
     const xpPct = (p.xp / p.xpToLevel * 100).toFixed(0);
