@@ -236,6 +236,7 @@ export function createWorld(game) {
 
   // Colliders
   game.colliders = [];
+  game.platforms = [];
 
   // Build structures
   buildResort(game);
@@ -997,10 +998,10 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
   for (const [dx, dz] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) {
     addCylinder(game, x + dx, y + stiltH / 2, z + dz, 0.08, 0.1, stiltH, 0x5C4033);
   }
-  addBox(game, x, y + stiltH, z, 3.5, 0.15, 3.5, 0x8B7355);
-  addBox(game, x, y + stiltH + 1.2, z - 1.7, 3.2, 2.2, 0.15, 0x9B8B60);
-  addBox(game, x - 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60);
-  addBox(game, x + 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60);
+  addBox(game, x, y + stiltH, z, 3.5, 0.15, 3.5, 0x8B7355, { collider: false });
+  addBox(game, x, y + stiltH + 1.2, z - 1.7, 3.2, 2.2, 0.15, 0x9B8B60, { collider: false });
+  addBox(game, x - 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60, { collider: false });
+  addBox(game, x + 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60, { collider: false });
   const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 2, 4), getMat(0x8B7B45));
   roof.position.set(x, y + stiltH + 3.3, z);
   roof.rotation.y = Math.PI / 4;
@@ -1023,41 +1024,53 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
   flame.position.copy(torch.position);
   game.scene.add(flame);
 
-  // Ladder at front of hut
-  const ladderX = x + 0.3;
-  const ladderZ = z + 1.75;
-  // Ladder rails
-  for (const side of [-0.2, 0.2]) {
-    addBox(game, ladderX + side, y + stiltH / 2, ladderZ, 0.05, stiltH + 0.3, 0.05, 0x5C4033, { collider: false });
+  // Register hut floor as walkable platform
+  const floorTop = y + stiltH + 0.075; // top surface of floor
+  game.platforms.push({
+    minX: x - 1.75, maxX: x + 1.75,
+    minZ: z - 1.75, maxZ: z + 1.75,
+    top: floorTop
+  });
+
+  // Wooden stairs at front of hut (lowest step farthest, climbing toward hut)
+  const stairWidth = 1.2;
+  const stairZ = z + 1.75;
+  const numSteps = 4;
+  const stairDepth = 1.8; // total depth of staircase
+  for (let s = 0; s < numSteps; s++) {
+    const stepH = y + (stiltH / numSteps) * (s + 1);
+    const stepZ = stairZ + stairDepth - s * (stairDepth / numSteps); // bottom step farthest
+    // Visual step
+    addBox(game, x, stepH - 0.08, stepZ, stairWidth, 0.15, 0.5, 0x7B5B3A, { collider: false });
+    // Walkable platform for this step
+    game.platforms.push({
+      minX: x - stairWidth / 2, maxX: x + stairWidth / 2,
+      minZ: stepZ - 0.25, maxZ: stepZ + 0.25,
+      top: stepH
+    });
   }
-  // Ladder rungs
-  for (let r = 0; r < 4; r++) {
-    const ry = y + 0.3 + r * (stiltH / 4);
-    addBox(game, ladderX, ry, ladderZ, 0.4, 0.04, 0.06, 0x6B5030, { collider: false });
+  // Stair railings
+  for (const side of [-stairWidth / 2 - 0.05, stairWidth / 2 + 0.05]) {
+    addCylinder(game, x + side, y + stiltH / 2 + 0.3, stairZ + stairDepth / 2, 0.03, 0.03, stairDepth, 0x5C4033, { collider: false });
   }
 
-  // Bed inside hut (visual)
+  // Bed inside hut
   if (hasBed) {
-    const stiltH = 1.5;
     // Bed frame
     addBox(game, x, y + stiltH + 0.25, z - 0.5, 1.2, 0.15, 2.2, 0x5C4033, { collider: false });
-    // Mattress
-    addBox(game, x, y + stiltH + 0.38, z - 0.5, 1.1, 0.12, 2.0, 0x7799AA, { collider: false });
+    // Mattress (interactable)
+    const mattress = addBox(game, x, y + stiltH + 0.38, z - 0.5, 1.1, 0.12, 2.0, 0x7799AA, { collider: false });
     // Pillow
     addBox(game, x, y + stiltH + 0.48, z - 1.3, 0.6, 0.1, 0.35, 0xCCBBAA, { collider: false });
     // Blanket (slightly draped)
     addBox(game, x, y + stiltH + 0.45, z + 0.1, 1.0, 0.06, 1.2, 0x886644, { collider: false });
 
-    // Woven sleeping mat at base of ladder (interact to sleep)
-    const mat = addBox(game, x, y + 0.05, ladderZ + 1.0, 1.4, 0.06, 2.0, 0x8B7744, { collider: false });
-    // Small rolled pillow on the mat
-    addCylinder(game, x, y + 0.15, ladderZ + 1.8, 0.12, 0.12, 0.5, 0xCCBBAA, { collider: false });
-    mat.userData = {
+    mattress.userData = {
       interactable: true,
       type: 'bed',
       promptText: 'Press E - Sleep until morning'
     };
-    game.interactables.push(mat);
+    game.interactables.push(mattress);
   }
 }
 

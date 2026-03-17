@@ -578,7 +578,22 @@ export class Player {
   }
 
   getGroundHeight(x, z) {
-    return getTerrainHeightFast(x, z);
+    let h = getTerrainHeightFast(x, z);
+    // Check platforms (hut floors, etc.)
+    const platforms = this.game.platforms;
+    if (platforms) {
+      const camY = this.game.camera.position.y - 1.7; // feet position
+      for (let i = 0; i < platforms.length; i++) {
+        const p = platforms[i];
+        if (x >= p.minX && x <= p.maxX && z >= p.minZ && z <= p.maxZ) {
+          // Only stand on platform if feet are above or near the surface
+          if (camY >= p.top - 0.5) {
+            h = Math.max(h, p.top);
+          }
+        }
+      }
+    }
+    return h;
   }
 
   updateRegion() {
