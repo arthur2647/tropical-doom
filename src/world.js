@@ -1140,20 +1140,20 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
   // Right wall
   addBox(game, x + 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60, { collider: false });
 
-  // Direct Box3 colliders to prevent walking through the hut (no mesh needed)
+  // Wall colliders start at floor level so players can walk freely under the hut
   // Back wall
   game.colliders.push(new THREE.Box3(
-    new THREE.Vector3(x - 1.75, y, z - 1.85),
+    new THREE.Vector3(x - 1.75, y + stiltH, z - 1.85),
     new THREE.Vector3(x + 1.75, y + stiltH + 2.5, z - 1.55)
   ));
   // Left wall
   game.colliders.push(new THREE.Box3(
-    new THREE.Vector3(x - 1.85, y, z - 1.75),
+    new THREE.Vector3(x - 1.85, y + stiltH, z - 1.75),
     new THREE.Vector3(x - 1.55, y + stiltH + 2.5, z + 1.75)
   ));
   // Right wall
   game.colliders.push(new THREE.Box3(
-    new THREE.Vector3(x + 1.55, y, z - 1.75),
+    new THREE.Vector3(x + 1.55, y + stiltH, z - 1.75),
     new THREE.Vector3(x + 1.85, y + stiltH + 2.5, z + 1.75)
   ));
 
@@ -1204,15 +1204,6 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
       top: stepH
     });
   }
-  // Stair collider — covers the full staircase volume so players can't walk through
-  const stairMidZ = stairZ + stairDepth / 2;
-  const stairMidY = y + stiltH / 2;
-  const stairCollider = new THREE.Box3(
-    new THREE.Vector3(x - stairWidth / 2, y, stairMidZ - stairDepth / 2),
-    new THREE.Vector3(x + stairWidth / 2, y + stiltH, stairMidZ + stairDepth / 2)
-  );
-  game.colliders.push(stairCollider);
-
   // Stair railings
   for (const side of [-stairWidth / 2 - 0.05, stairWidth / 2 + 0.05]) {
     addCylinder(game, x + side, y + stiltH / 2 + 0.3, stairZ + stairDepth / 2, 0.03, 0.03, stairDepth, 0x5C4033, { collider: false });
