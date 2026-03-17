@@ -1204,6 +1204,15 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
       top: stepH
     });
   }
+  // Stair collider — covers the full staircase volume so players can't walk through
+  const stairMidZ = stairZ + stairDepth / 2;
+  const stairMidY = y + stiltH / 2;
+  const stairCollider = new THREE.Box3(
+    new THREE.Vector3(x - stairWidth / 2, y, stairMidZ - stairDepth / 2),
+    new THREE.Vector3(x + stairWidth / 2, y + stiltH, stairMidZ + stairDepth / 2)
+  );
+  game.colliders.push(stairCollider);
+
   // Stair railings
   for (const side of [-stairWidth / 2 - 0.05, stairWidth / 2 + 0.05]) {
     addCylinder(game, x + side, y + stiltH / 2 + 0.3, stairZ + stairDepth / 2, 0.03, 0.03, stairDepth, 0x5C4033, { collider: false });
