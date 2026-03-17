@@ -612,19 +612,19 @@ class Game {
 
   openInventory() {
     this.state = GameState.INVENTORY;
-    this.controls.unlock();
+    if (!this.touch.enabled) this.controls.unlock();
     this.ui.showInventory(true);
   }
 
   openQuestLog() {
     this.state = GameState.QUEST_LOG;
-    this.controls.unlock();
+    if (!this.touch.enabled) this.controls.unlock();
     this.ui.showQuestLog(true);
   }
 
   openCrafting() {
     this.state = GameState.CRAFTING;
-    this.controls.unlock();
+    if (!this.touch.enabled) this.controls.unlock();
     this.ui.showCrafting(true);
   }
 
@@ -639,7 +639,7 @@ class Game {
 
   pause() {
     this.state = GameState.PAUSED;
-    this.controls.unlock();
+    if (!this.touch.enabled) this.controls.unlock();
     document.getElementById('pause-screen').style.display = 'flex';
   }
 
@@ -651,7 +651,7 @@ class Game {
 
   playerDeath(cause) {
     this.state = GameState.DEAD;
-    this.controls.unlock();
+    if (!this.touch.enabled) this.controls.unlock();
     const mins = Math.floor(this.totalTime / 60);
     const secs = Math.floor(this.totalTime % 60);
     document.getElementById('death-cause').textContent = cause || 'Consumed by darkness';

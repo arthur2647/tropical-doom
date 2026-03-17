@@ -1114,22 +1114,27 @@ export class EnemyManager {
         }
       }
 
-      // Hit flash visual
+      // Hit flash visual - only affect non-glow materials to preserve eye/aura glow
       if (e.hitFlash > 0) {
         e.model.children.forEach(c => {
           if (c.material && c.material.emissive) {
+            if (c.userData._origEmissive === undefined) {
+              c.userData._origEmissive = c.material.emissive.getHex();
+              c.userData._origEmissiveI = c.material.emissiveIntensity;
+            }
             c.material.emissive.setHex(0xff4444);
-            c.material.emissiveIntensity = e.hitFlash;
+            c.material.emissiveIntensity = Math.max(c.userData._origEmissiveI, e.hitFlash);
           }
         });
-      } else {
+      } else if (e._wasFlashing) {
         e.model.children.forEach(c => {
-          if (c.material && c.material.emissive && c.material.emissiveIntensity > 0) {
-            c.material.emissive.setHex(0x000000);
-            c.material.emissiveIntensity = 0;
+          if (c.material && c.material.emissive && c.userData._origEmissive !== undefined) {
+            c.material.emissive.setHex(c.userData._origEmissive);
+            c.material.emissiveIntensity = c.userData._origEmissiveI;
           }
         });
       }
+      e._wasFlashing = e.hitFlash > 0;
 
       // Too far away - despawn (but never despawn bosses)
       if (dist > 100 && !e.def.boss) {
@@ -1271,15 +1276,20 @@ export class EnemyManager {
         model.position.y -= 0.01;
       }
 
-      // Phase 2 (0.5-1.5s): lie on ground, flash red then fade
+      // Phase 2 (0.5-1.5s): lie on ground, fade out
       if (deathTime >= 0.5) {
         const fadeProgress = (deathTime - 0.5) / 1.0; // 0 to 1 over 1 second
-        model.children.forEach(c => {
-          if (c.material) {
-            if (!c.material.transparent) {
+        if (!model.userData._deathCloned) {
+          model.userData._deathCloned = true;
+          model.children.forEach(c => {
+            if (c.material) {
               c.material = c.material.clone();
               c.material.transparent = true;
             }
+          });
+        }
+        model.children.forEach(c => {
+          if (c.material) {
             c.material.opacity = Math.max(0, 1 - fadeProgress);
           }
         });
