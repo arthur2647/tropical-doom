@@ -122,10 +122,9 @@ export class WeatherSystem {
     this.lightningTimer = 3 + Math.random() * 5;
     this.game.ui.addMessage('Dark clouds gather... rain begins to fall.', 'system');
 
-    // Darken scene slightly
+    // Increase fog density during rain
     if (this.game.scene.fog) {
-      this.game.scene.fog.near = 20;
-      this.game.scene.fog.far = 120;
+      this.game.scene.fog.density = 0.018;
     }
   }
 
@@ -135,8 +134,7 @@ export class WeatherSystem {
     this.scheduleRain();
 
     if (this.game.scene.fog) {
-      this.game.scene.fog.near = 30;
-      this.game.scene.fog.far = 130;
+      this.game.scene.fog.density = 0.012;
     }
   }
 

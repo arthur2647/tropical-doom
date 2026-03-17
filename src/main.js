@@ -3,6 +3,7 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { createWorld, REGIONS, updateMinimap, updateEnvironment } from './world.js';
 import { Player } from './player.js';
 import { EnemyManager } from './enemies.js';
@@ -34,6 +35,10 @@ class Game {
     // Three.js
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500);
+    this.scene.add(this.camera); // Camera must be in scene for weapon model to render
+    this.baseFOV = 75;
+    this.targetFOV = 75;
+    this.cameraShake = 0;
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -53,6 +58,34 @@ class Game {
       0.85  // threshold - only bright things bloom
     );
     this.composer.addPass(this.bloomPass);
+
+    // Vignette + color grading pass
+    const vignetteShader = {
+      uniforms: {
+        tDiffuse: { value: null },
+        darkness: { value: 0.5 },
+        offset: { value: 1.2 },
+      },
+      vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float darkness;
+        uniform float offset;
+        varying vec2 vUv;
+        void main() {
+          vec4 color = texture2D(tDiffuse, vUv);
+          vec2 uv = (vUv - 0.5) * 2.0;
+          float vig = 1.0 - dot(uv, uv) * darkness;
+          vig = clamp(pow(vig, 1.5), 0.0, 1.0);
+          color.rgb *= vig;
+          // Subtle warm color grading
+          color.r *= 1.02;
+          color.b *= 0.97;
+          gl_FragColor = color;
+        }`
+    };
+    this.vignettePass = new ShaderPass(vignetteShader);
+    this.composer.addPass(this.vignettePass);
 
     // Controls
     this.controls = new PointerLockControls(this.camera, document.body);
@@ -304,6 +337,32 @@ class Game {
       this.checkInteractables();
       this.ui.update(dt);
       updateMinimap(this);
+
+      // --- Sprint FOV kick ---
+      const sprinting = this.keys['ShiftLeft'] && this.player.stamina > 10;
+      const moving = this.player.direction.length() > 0;
+      this.targetFOV = (sprinting && moving) ? 85 : this.baseFOV;
+      const currentFOV = this.camera.fov;
+      if (Math.abs(currentFOV - this.targetFOV) > 0.1) {
+        this.camera.fov += (this.targetFOV - currentFOV) * dt * 6;
+        this.camera.updateProjectionMatrix();
+      }
+
+      // --- Camera shake (from hits) ---
+      if (this.cameraShake > 0) {
+        this.cameraShake *= (1 - dt * 8);
+        this.camera.rotation.z += (Math.random() - 0.5) * this.cameraShake * 0.04;
+        this.camera.rotation.x += (Math.random() - 0.5) * this.cameraShake * 0.02;
+      } else {
+        // Gently return z rotation to 0
+        this.camera.rotation.z *= 0.9;
+      }
+
+      // --- Idle breathing sway ---
+      if (!moving) {
+        const breathe = Math.sin(this.totalTime * 1.5) * 0.002;
+        this.camera.position.y += breathe;
+      }
     }
 
     // Shadow camera follows player for better shadow quality nearby
@@ -315,6 +374,11 @@ class Game {
     // Bloom intensity adjusts with time of day
     if (this.bloomPass) {
       this.bloomPass.strength = this.isNight ? 0.5 : 0.25;
+    }
+
+    // Vignette darkens at night
+    if (this.vignettePass) {
+      this.vignettePass.uniforms.darkness.value = this.isNight ? 0.7 : 0.4;
     }
 
     this.composer.render();

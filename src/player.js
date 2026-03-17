@@ -376,7 +376,26 @@ export class Player {
         this.weaponSwing += dt * bobSpeed;
         this.weaponMesh.position.y = -0.35 + Math.sin(this.weaponSwing) * bobAmt;
         this.weaponMesh.position.x = 0.35 + Math.cos(this.weaponSwing * 0.5) * bobAmt * 0.5;
+      } else {
+        // Idle breathing sway on weapon
+        const idleSway = Math.sin(Date.now() * 0.0015) * 0.005;
+        this.weaponMesh.position.y = -0.35 + idleSway;
+        this.weaponMesh.position.x += (0.35 - this.weaponMesh.position.x) * 0.05;
       }
+
+      // Weapon sway - lags behind camera rotation for natural feel
+      if (!this._lastCamY) this._lastCamY = cam.rotation.y;
+      if (!this._lastCamX) this._lastCamX = cam.rotation.x;
+      const camDeltaY = cam.rotation.y - this._lastCamY;
+      const camDeltaX = cam.rotation.x - this._lastCamX;
+      this._lastCamY = cam.rotation.y;
+      this._lastCamX = cam.rotation.x;
+      // Apply sway with damping
+      this._swayX = (this._swayX || 0) * 0.85 + camDeltaY * 2.0;
+      this._swayY = (this._swayY || 0) * 0.85 + camDeltaX * 1.5;
+      this.weaponMesh.position.x += THREE.MathUtils.clamp(this._swayX, -0.08, 0.08);
+      this.weaponMesh.position.y += THREE.MathUtils.clamp(this._swayY, -0.06, 0.06);
+
       // Attack animation
       if (this.attackCooldown > this.weapon.speed * 0.5) {
         const t = (this.attackCooldown - this.weapon.speed * 0.5) / (this.weapon.speed * 0.5);
@@ -478,6 +497,7 @@ export class Player {
     this.invincible = 0.3;
     this.lastDamageTime = Date.now();
     this.game.ui.flashDamage();
+    this.game.cameraShake = Math.min(1, reduced / 20); // Shake intensity based on damage
     if (this.hp <= 0) {
       this.hp = 0;
       this.game.playerDeath(`Killed by ${source || 'the island'}`);

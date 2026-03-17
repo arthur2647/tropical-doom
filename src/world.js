@@ -85,21 +85,64 @@ function buildHeightGrid() {
   }
 }
 
+// --- Procedural texture generation ---
+const TEX_CACHE = {};
+function makeNoiseTex(baseR, baseG, baseB, noiseAmt = 30, size = 64) {
+  const key = `${baseR}_${baseG}_${baseB}_${noiseAmt}_${size}`;
+  if (TEX_CACHE[key]) return TEX_CACHE[key];
+  const canvas = document.createElement('canvas');
+  canvas.width = size; canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * noiseAmt;
+    img.data[i] = Math.max(0, Math.min(255, baseR + n));
+    img.data[i+1] = Math.max(0, Math.min(255, baseG + n * 0.7));
+    img.data[i+2] = Math.max(0, Math.min(255, baseB + n * 0.5));
+    img.data[i+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 2);
+  TEX_CACHE[key] = tex;
+  return tex;
+}
+
+// Pre-build common textures
+let TEX_WOOD, TEX_STONE, TEX_CONCRETE, TEX_BARK, TEX_THATCH;
+function initTextures() {
+  TEX_WOOD = makeNoiseTex(110, 80, 45, 25, 64);
+  TEX_STONE = makeNoiseTex(100, 100, 95, 20, 64);
+  TEX_CONCRETE = makeNoiseTex(160, 155, 145, 15, 64);
+  TEX_BARK = makeNoiseTex(90, 60, 30, 35, 64);
+  TEX_THATCH = makeNoiseTex(140, 120, 60, 30, 64);
+}
+
 // --- Shared materials (reuse!) ---
 const MATS = {};
 function getMat(color, roughness = 0.8) {
   const key = `${color}_${roughness}`;
   if (!MATS[key]) {
-    MATS[key] = new THREE.MeshLambertMaterial({ color }); // Lambert = cheaper than Standard
+    MATS[key] = new THREE.MeshStandardMaterial({ color, roughness, metalness: 0 });
+  }
+  return MATS[key];
+}
+
+function getTexMat(color, tex, roughness = 0.85) {
+  const key = `tex_${color}_${roughness}`;
+  if (!MATS[key]) {
+    MATS[key] = new THREE.MeshStandardMaterial({ color, map: tex, roughness, metalness: 0 });
   }
   return MATS[key];
 }
 
 export function createWorld(game) {
   const scene = game.scene;
+  initTextures();
 
-  // Fog - closer for perf + atmosphere
-  scene.fog = new THREE.Fog(0x88bbdd, 30, 130);
+  // Fog - exponential for natural look
+  scene.fog = new THREE.FogExp2(0x88bbdd, 0.012);
   scene.background = new THREE.Color(0.45, 0.72, 1.0);
 
   // Lights - simplified
@@ -149,7 +192,9 @@ export function createWorld(game) {
   }
   terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  const terrain = new THREE.Mesh(terrainGeo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const terrain = new THREE.Mesh(terrainGeo, new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.9, metalness: 0
+  }));
   terrain.receiveShadow = true;
   scene.add(terrain);
   game.terrain = terrain;
@@ -652,12 +697,22 @@ export function updateMinimap(game) {
 // --- Helper functions ---
 function addBox(game, x, y, z, w, h, d, color, opts = {}) {
   const geo = new THREE.BoxGeometry(w, h, d);
-  const mat = getMat(color);
+  // Auto-pick textured material for buildings based on color
+  let mat;
+  const c = color;
+  if (c === 0xAA9977 || c === 0x998866 || c === 0xBBAA88 || c === 0x887766) {
+    mat = getTexMat(c, TEX_WOOD);       // wooden walls
+  } else if (c === 0x777777 || c === 0x666666 || c === 0x888888 || c === 0x555555) {
+    mat = getTexMat(c, TEX_STONE);      // stone/concrete
+  } else if (c === 0xBB9966 || c === 0xAA8855 || c === 0xCC9955) {
+    mat = getTexMat(c, TEX_THATCH);     // thatch/bamboo
+  } else {
+    mat = getMat(c);
+  }
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, y, z);
   if (opts.rotY) mesh.rotation.y = opts.rotY;
-  // Only big structures cast shadows
-  if (h > 2) mesh.castShadow = true;
+  mesh.castShadow = true;
   mesh.receiveShadow = true;
   game.scene.add(mesh);
 
@@ -695,7 +750,7 @@ function createPalmTree(game, x, z, height = 8) {
 
   // --- Curved trunk with bark rings ---
   const segments = 5;
-  const trunkMat = getMat(0x7B5B3A);
+  const trunkMat = getTexMat(0x7B5B3A, TEX_BARK, 0.95);
   const darkBark = getMat(0x4A2F16);
   for (let i = 0; i < segments; i++) {
     const t = i / segments;
