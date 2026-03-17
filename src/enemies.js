@@ -36,6 +36,16 @@ const ENEMY_DEFS = {
     name: 'Corrupted Diwata', hp: 800, speed: 2.0, damage: 30, xp: 500, gold: 200,
     color: 0x440088, size: 1.5, attackRange: 10, attackSpeed: 1.0, boss: true, ranged: true,
     bodyParts: { head: 0x660099, body: 0x330066, limbs: 0x550088 }
+  },
+  sigbin: {
+    name: 'Sigbin', hp: 30, speed: 5.0, damage: 6, xp: 18, gold: 10,
+    color: 0x443322, size: 0.6, attackRange: 1.8, attackSpeed: 0.5,
+    bodyParts: { head: 0x332211, body: 0x443322, limbs: 0x554433 }
+  },
+  bakunawa: {
+    name: 'Bakunawa', hp: 350, speed: 1.5, damage: 25, xp: 150, gold: 60,
+    color: 0x225544, size: 1.8, attackRange: 5, attackSpeed: 1.8, boss: true,
+    bodyParts: { head: 0x336655, body: 0x225544, limbs: 0x114433 }
   }
 };
 
@@ -813,6 +823,134 @@ function createEnemyModel(def) {
     outerAura.position.y = s*0.8;
     group.add(outerAura);
 
+  } else if (def === ENEMY_DEFS.sigbin) {
+    // Sigbin - small, dog-like shadow creature with backward feet
+    // Low body - quadruped stance
+    const body = new THREE.Mesh(new THREE.BoxGeometry(s*0.3, s*0.25, s*0.55), mSkin(bp.body));
+    body.position.set(0, s*0.35, 0); body.rotation.x = -0.1;
+    group.add(body);
+    // Spine ridge
+    for (let i = 0; i < 4; i++) {
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(s*0.02, s*0.06, 3), mS(0x221111, 0.6));
+      spike.position.set(0, s*0.5, -s*0.15 + i*s*0.1);
+      group.add(spike);
+    }
+    // Head - pointed snout
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.16, 6, 6), mSkin(bp.head));
+    head.position.set(0, s*0.45, s*0.3); head.scale.set(0.8, 0.7, 1.2);
+    group.add(head);
+    // Snout
+    const snout = new THREE.Mesh(new THREE.ConeGeometry(s*0.06, s*0.15, 5), mSkin(bp.head));
+    snout.position.set(0, s*0.4, s*0.45); snout.rotation.x = -Math.PI/2;
+    group.add(snout);
+    // Glowing yellow eyes
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 4, 4), mGlow(0xffcc00, 0xffaa00, 1.0));
+      eye.position.set(side*s*0.08, s*0.5, s*0.38);
+      group.add(eye);
+    }
+    // Ears - pointed, bat-like
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(s*0.04, s*0.12, 3), mSkin(bp.head));
+      ear.position.set(side*s*0.1, s*0.6, s*0.25);
+      ear.rotation.z = side * 0.3;
+      group.add(ear);
+    }
+    // Legs - backward feet, thin
+    for (const [sx, sz] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(s*0.03, s*0.025, s*0.25, 4), mSkin(bp.limbs));
+      leg.position.set(sx*s*0.12, s*0.12, sz*s*0.18);
+      group.add(leg);
+      const paw = new THREE.Mesh(new THREE.SphereGeometry(s*0.03, 4, 3), mS(0x221111));
+      paw.position.set(sx*s*0.12, s*0.01, sz*s*0.18);
+      group.add(paw);
+    }
+    // Thin whip tail
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(s*0.015, s*0.005, s*0.3, 3), mSkin(bp.body));
+    tail.position.set(0, s*0.35, -s*0.35); tail.rotation.x = 0.5;
+    group.add(tail);
+    // Shadow aura
+    const aura = new THREE.Mesh(new THREE.SphereGeometry(s*0.4, 6, 4),
+      new THREE.MeshBasicMaterial({ color: 0x110011, transparent: true, opacity: 0.08 }));
+    aura.position.y = s*0.35;
+    group.add(aura);
+    // Eye glow light
+    const eyeLight = new THREE.PointLight(0xffaa00, 0.3, 3);
+    eyeLight.position.set(0, s*0.5, s*0.35);
+    group.add(eyeLight);
+
+  } else if (def === ENEMY_DEFS.bakunawa) {
+    // Bakunawa - massive sea serpent, coiled body
+    // Coiled body segments
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const r = s * 0.35;
+      const segSize = s * (0.18 - i * 0.012);
+      const seg = new THREE.Mesh(new THREE.SphereGeometry(segSize, 6, 6), mSkin(bp.body));
+      seg.position.set(Math.cos(angle) * r, s * 0.2 + i * s * 0.08, Math.sin(angle) * r);
+      seg.scale.set(1, 0.8, 1);
+      group.add(seg);
+    }
+    // Scales along body
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const scale = new THREE.Mesh(new THREE.BoxGeometry(s*0.04, s*0.03, s*0.06), mS(0x114433, 0.4));
+      scale.position.set(Math.cos(angle) * s * 0.4, s * 0.3 + Math.sin(i) * s * 0.1, Math.sin(angle) * s * 0.4);
+      group.add(scale);
+    }
+    // Head - large, dragon-like
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.25, 8, 8), mSkin(bp.head));
+    head.position.set(0, s*0.9, s*0.3); head.scale.set(1, 0.8, 1.3);
+    group.add(head);
+    // Upper jaw/snout
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(s*0.2, s*0.08, s*0.25), mSkin(bp.head));
+    jaw.position.set(0, s*0.85, s*0.5);
+    group.add(jaw);
+    // Lower jaw
+    const lowerJaw = new THREE.Mesh(new THREE.BoxGeometry(s*0.18, s*0.06, s*0.2), mS(0x1a3a2a));
+    lowerJaw.position.set(0, s*0.78, s*0.48);
+    group.add(lowerJaw);
+    // Fangs
+    for (const side of [-1, 1]) {
+      const fang = new THREE.Mesh(new THREE.ConeGeometry(s*0.015, s*0.08, 4), mS(0xeeddcc, 0.3));
+      fang.position.set(side*s*0.06, s*0.76, s*0.55);
+      fang.rotation.x = Math.PI;
+      group.add(fang);
+    }
+    // Glowing green eyes
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.05, 6, 6), mGlow(0x00ff88, 0x00cc66, 1.2));
+      eye.position.set(side*s*0.1, s*0.92, s*0.45);
+      group.add(eye);
+    }
+    // Horn/crest
+    for (let i = 0; i < 3; i++) {
+      const horn = new THREE.Mesh(new THREE.ConeGeometry(s*0.02, s*0.12, 4), mS(0x114433, 0.5));
+      horn.position.set(0, s*1.05 + i*s*0.02, s*0.2 - i*s*0.08);
+      horn.rotation.x = -0.3;
+      group.add(horn);
+    }
+    // Fin/frill along neck
+    for (let i = 0; i < 5; i++) {
+      const fin = new THREE.Mesh(new THREE.PlaneGeometry(s*0.01, s*0.08),
+        new THREE.MeshStandardMaterial({ color: 0x33aa77, side: THREE.DoubleSide, transparent: true, opacity: 0.7 }));
+      fin.position.set(0, s*0.75 + i*s*0.06, s*0.15 - i*s*0.05);
+      group.add(fin);
+    }
+    // Tail tip (visible end of coil)
+    const tailTip = new THREE.Mesh(new THREE.ConeGeometry(s*0.06, s*0.2, 5), mSkin(bp.limbs));
+    tailTip.position.set(s*0.3, s*0.15, -s*0.2); tailTip.rotation.z = Math.PI/2;
+    group.add(tailTip);
+    // Aura glow
+    const auraLight = new THREE.PointLight(0x00ff88, 1.0, 10);
+    auraLight.position.set(0, s*0.9, s*0.3);
+    group.add(auraLight);
+    // Inner aura
+    const innerAura = new THREE.Mesh(new THREE.SphereGeometry(s*0.6, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0x005533, transparent: true, opacity: 0.06 }));
+    innerAura.position.y = s*0.5;
+    group.add(innerAura);
+
   } else {
     // Generic fallback
     const body = new THREE.Mesh(new THREE.CylinderGeometry(s*0.2, s*0.18, s*0.6, 6), mSkin(bp.body));
@@ -964,6 +1102,15 @@ export class EnemyManager {
     this.spawn('manananggal', new THREE.Vector3(-55, 0, -50));
     // Kapre boss deep jungle
     this.spawn('kapre', new THREE.Vector3(-45, 0, 65));
+    // Sigbin pack in the jungle
+    for (let i = 0; i < 3; i++) {
+      this.spawn('sigbin', new THREE.Vector3(
+        -45 + (Math.random() - 0.5) * 20, 0,
+        55 + (Math.random() - 0.5) * 20
+      ));
+    }
+    // Bakunawa in the swamp
+    this.spawn('bakunawa', new THREE.Vector3(42, 0, 72));
   }
 
   spawn(type, position) {
@@ -1002,6 +1149,8 @@ export class EnemyManager {
       manananggal: ['dark_essence', 'bat_wing', 'herbs'],
       kapre: ['ancient_wood', 'thick_hide', 'dark_essence', 'dark_essence'],
       diwata: ['sacred_crystal', 'ancient_wood', 'dark_essence'],
+      sigbin: ['sharp_bone', 'cloth_rag'],
+      bakunawa: ['thick_hide', 'thick_hide', 'dark_essence', 'sacred_crystal'],
     };
     return drops[type] || ['scrap_metal'];
   }
@@ -1013,7 +1162,7 @@ export class EnemyManager {
     for (let i = 0; i < 5; i++) {
       const angle = Math.random() * Math.PI * 2;
       const dist = 25 + Math.random() * 20;
-      const types = ['aswang', 'aswang', 'infected', 'tiyanak', 'manananggal'];
+      const types = ['aswang', 'aswang', 'infected', 'tiyanak', 'manananggal', 'sigbin', 'sigbin'];
       this.spawn(types[Math.floor(Math.random() * types.length)], new THREE.Vector3(
         playerPos.x + Math.cos(angle) * dist, 0,
         playerPos.z + Math.sin(angle) * dist
@@ -1031,7 +1180,7 @@ export class EnemyManager {
       const angle = Math.random() * Math.PI * 2;
       const dist = 40 + Math.random() * 30;
       const types = this.game.isNight
-        ? ['aswang', 'aswang', 'manananggal', 'tiyanak', 'infected']
+        ? ['aswang', 'aswang', 'manananggal', 'tiyanak', 'infected', 'sigbin']
         : ['infected', 'infected', 'tiyanak', 'infected', 'aswang'];
       this.spawn(types[Math.floor(Math.random() * types.length)], new THREE.Vector3(
         playerPos.x + Math.cos(angle) * dist, 0,
@@ -1293,6 +1442,15 @@ export class EnemyManager {
       }
     }
 
+    // Random weapon drops (5% chance, 10% from bosses)
+    const weaponDropChance = e.def.boss ? 0.1 : 0.05;
+    if (Math.random() < weaponDropChance) {
+      const droppedWeapon = this.generateRandomWeapon(e.def);
+      if (droppedWeapon) {
+        this.game.itemManager.spawnWeaponDrop(droppedWeapon, e.model.position.clone());
+      }
+    }
+
     // Quest triggers
     this.game.questManager.triggerEvent('kill_' + e.type);
     if (e.def.boss) this.game.questManager.triggerEvent('kill_boss_' + e.type);
@@ -1350,5 +1508,33 @@ export class EnemyManager {
         if (idx >= 0) this.enemies.splice(idx, 1);
       }
     }, 30);
+  }
+
+  generateRandomWeapon(enemyDef) {
+    const prefixes = [
+      { name: 'Rusty', dmgMult: 0.85, durMult: 0.7, color: '#aa6633' },
+      { name: 'Worn', dmgMult: 0.9, durMult: 0.8, color: '#998877' },
+      { name: 'Sharp', dmgMult: 1.15, durMult: 0.9, color: '#ccccdd' },
+      { name: 'Sturdy', dmgMult: 1.0, durMult: 1.3, color: '#88aa88' },
+      { name: 'Brutal', dmgMult: 1.25, durMult: 0.85, color: '#cc4444' },
+      { name: 'Blessed', dmgMult: 1.2, durMult: 1.2, color: '#aabb44' },
+    ];
+    const baseWeapons = [
+      { id: 'bolo', name: 'Bolo', icon: '\u{1FA93}', damage: 18, speed: 0.45, range: 2.8, durability: 120, maxDurability: 120, type: 'melee', heavy: 30, staminaCost: 10, heavyStaminaCost: 22 },
+      { id: 'sibat', name: 'Sibat', icon: '\u{1F531}', damage: 15, speed: 0.6, range: 3.5, durability: 100, maxDurability: 100, type: 'melee', heavy: 28, staminaCost: 9, heavyStaminaCost: 20 },
+      { id: 'kitchen_knife', name: 'Knife', icon: '\u{1F52A}', damage: 12, speed: 0.3, range: 2, durability: 50, maxDurability: 50, type: 'melee', heavy: 20, staminaCost: 6, heavyStaminaCost: 15 },
+    ];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const base = baseWeapons[Math.floor(Math.random() * baseWeapons.length)];
+    return {
+      ...base,
+      id: base.id + '_' + prefix.name.toLowerCase(),
+      name: `${prefix.name} ${base.name}`,
+      damage: Math.round(base.damage * prefix.dmgMult),
+      heavy: Math.round(base.heavy * prefix.dmgMult),
+      durability: Math.round(base.durability * prefix.durMult),
+      maxDurability: Math.round(base.maxDurability * prefix.durMult),
+      desc: `A ${prefix.name.toLowerCase()} ${base.name.toLowerCase()} dropped by a ${enemyDef.name}.`,
+    };
   }
 }

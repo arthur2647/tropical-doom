@@ -16,6 +16,8 @@ const ITEM_DEFS = {
     desc: 'Found in the resort vending machines. Full stamina restore.' },
   antidote: { name: 'Antidote', icon: '\u{1F48A}', color: 0x8844FF, category: 'consumable',
     desc: 'Cures poison and restores some health.' },
+  bangkaw: { name: 'Bangkaw (Spear)', icon: '\u{1F531}', color: 0x8B9B55, category: 'consumable',
+    desc: 'A throwing spear. Deals 40 damage at range.' },
   scrap_metal: { name: 'Scrap Metal', icon: '\u{1F529}', color: 0x888888, category: 'material',
     desc: 'Rusty metal scraps. Useful for crafting weapons.' },
   cloth_rag: { name: 'Cloth Rag', icon: '\u{1F9F5}', color: 0xCCBBAA, category: 'material',
@@ -287,6 +289,19 @@ function buildItemMesh(id, def) {
       g.add(glow);
       return g;
     }
+    case 'bangkaw': {
+      const g = new THREE.Group();
+      // Shaft
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.012, 0.35, 5), m(0x8B9B55));
+      shaft.rotation.z = 0.3;
+      g.add(shaft);
+      // Spearhead
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.08, 4), m(0xBBBBCC));
+      head.position.set(0.1, 0.14, 0);
+      head.rotation.z = 0.3;
+      g.add(head);
+      return g;
+    }
     case 'sacred_amulet': case 'sacred_shell': case 'sacred_flame': {
       // Glowing quest relic
       const g = new THREE.Group();
@@ -492,6 +507,62 @@ export class ItemManager {
     this.game.scene.add(model);
     this.game.interactables.push(model);
     this.items.push({ id, model, def, time: 0, quest: true });
+  }
+
+  spawnWeaponDrop(weapon, position) {
+    const group = new THREE.Group();
+
+    // Glowing weapon pickup visual
+    const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.15, 0),
+      new THREE.MeshLambertMaterial({ color: 0xffaa33, emissive: 0xcc8822, emissiveIntensity: 0.5 }));
+    gem.scale.y = 0.7;
+    group.add(gem);
+
+    // Label
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 48;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.roundRect(8, 6, 240, 36, 8);
+    ctx.fill();
+    ctx.font = '18px sans-serif';
+    ctx.fillStyle = '#ffcc44';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${weapon.icon || '\u2694\uFE0F'} ${weapon.name}`, 128, 32);
+    const labelTex = new THREE.CanvasTexture(canvas);
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelTex, transparent: true, depthTest: false }));
+    label.position.y = 0.5;
+    label.scale.set(1.8, 0.35, 1);
+    group.add(label);
+
+    // Glow ring
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.2, 0.35, 16),
+      new THREE.MeshBasicMaterial({ color: 0xffaa33, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = -0.3;
+    group.add(ring);
+
+    // Point light
+    const light = new THREE.PointLight(0xffaa33, 0.8, 5);
+    light.position.y = 0.3;
+    group.add(light);
+
+    const gy = getTerrainHeightFast(position.x, position.z);
+    group.position.set(position.x, gy + 0.5, position.z);
+
+    group.userData = {
+      interactable: true,
+      type: 'weapon_drop',
+      weapon: weapon,
+      promptText: `Press E - Pick up ${weapon.name}`
+    };
+
+    this.game.scene.add(group);
+    this.game.interactables.push(group);
+    this.items.push({ id: 'weapon_drop', model: group, def: { color: 0xffaa33 }, time: 0 });
   }
 
   pickup(itemObj) {

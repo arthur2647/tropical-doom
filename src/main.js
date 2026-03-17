@@ -677,6 +677,16 @@ class Game {
       const data = this.currentInteractable.userData;
       if (data.type === 'npc') this.npcManager.talkTo(data.npcId);
       else if (data.type === 'item') this.itemManager.pickup(this.currentInteractable);
+      else if (data.type === 'weapon_drop') {
+        if (this.player.addWeapon({ ...data.weapon })) {
+          this.scene.remove(this.currentInteractable);
+          const iIdx = this.interactables.indexOf(this.currentInteractable);
+          if (iIdx >= 0) this.interactables.splice(iIdx, 1);
+          const itemIdx = this.itemManager.items.findIndex(i => i.model === this.currentInteractable);
+          if (itemIdx >= 0) this.itemManager.items.splice(itemIdx, 1);
+          this.audioManager.playPickup();
+        }
+      }
       else if (data.type === 'workbench') this.openCrafting();
       else if (data.type === 'bed') this.startSleep();
       else if (data.type === 'lore') {

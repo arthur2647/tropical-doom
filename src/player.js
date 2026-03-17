@@ -224,7 +224,7 @@ export class Player {
   }
 
   getItemCategory(id) {
-    const consumables = ['coconut', 'buko_juice', 'adobo', 'herbs', 'bandage', 'energy_drink', 'antidote', 'molotov'];
+    const consumables = ['coconut', 'buko_juice', 'adobo', 'herbs', 'bandage', 'energy_drink', 'antidote', 'molotov', 'bangkaw'];
     return consumables.includes(id) ? 'consumable' : 'material';
   }
 
@@ -238,10 +238,22 @@ export class Player {
       bandage: { hp: 30 },
       energy_drink: { stamina: 80 },
       antidote: { hp: 15, cure: true },
-      molotov: { aoe: true }
+      molotov: { aoe: true },
+      bangkaw: { thrown: true }
     };
     const e = effects[id];
     if (!e) return;
+    // Bangkaw: thrown spear, high single-target damage
+    if (e.thrown) {
+      this.consumables[id]--;
+      if (this.consumables[id] <= 0) delete this.consumables[id];
+      this.game.ui.addMessage('You hurl a throwing spear!', 'combat');
+      const cam = this.game.camera;
+      cam.getWorldDirection(this._attackDir);
+      this.game.enemyManager.rangedHit(cam.position, this._attackDir, 20, 40);
+      this.game.audioManager.playSwing();
+      return;
+    }
     // Molotov: area damage around player
     if (e.aoe) {
       this.consumables[id]--;
@@ -293,7 +305,13 @@ export class Player {
       return m;
     };
 
-    switch (w.id) {
+    // Resolve base weapon ID for prefixed random drops (e.g., 'bolo_rusty' -> 'bolo')
+    let wid = w.id;
+    for (const base of ['kitchen_knife', 'sibat', 'tirador', 'bolo', 'paddle', 'sumpak']) {
+      if (wid !== base && wid.startsWith(base + '_')) { wid = base; break; }
+    }
+
+    switch (wid) {
       case 'paddle': {
         // Flat wooden paddle blade with rounded top
         add(new THREE.BoxGeometry(0.08, 0.3, 0.015), std(0x8B7355), [0, -0.05, 0]);
@@ -413,6 +431,45 @@ export class Player {
         // Ornate handle with rune glow
         add(new THREE.CylinderGeometry(0.022, 0.018, 0.15, 6), glow(0x3a2510, 0x442288, 0.15), [0, 0.08, 0]);
         add(new THREE.SphereGeometry(0.025, 6, 4), glow(0x9966FF, 0x6633CC, 0.4), [0, 0.16, 0]);
+        break;
+      }
+      case 'sibat': {
+        // Long spear - bamboo shaft with metal tip
+        // Shaft
+        add(new THREE.CylinderGeometry(0.012, 0.015, 0.7, 6), std(0x8B9B55), [0, -0.2, 0]);
+        // Spearhead
+        const spearShape = new THREE.Shape();
+        spearShape.moveTo(0, 0); spearShape.lineTo(0.025, -0.1); spearShape.lineTo(0, -0.15);
+        spearShape.lineTo(-0.025, -0.1);
+        add(new THREE.ExtrudeGeometry(spearShape, { depth: 0.004, bevelEnabled: false }), std(0xBBBBCC, 0.7, 0.25), [0, -0.55, -0.002]);
+        // Binding
+        for (let i = 0; i < 3; i++) add(new THREE.TorusGeometry(0.014, 0.003, 4, 6), std(0x553322), [0, -0.48 + i * 0.015, 0], [Math.PI / 2, 0, 0]);
+        // Grip wrap
+        add(new THREE.CylinderGeometry(0.018, 0.018, 0.1, 6), std(0x443322), [0, 0.1, 0]);
+        // Butt cap
+        add(new THREE.SphereGeometry(0.018, 5, 4), std(0x666655), [0, 0.36, 0]);
+        break;
+      }
+      case 'tirador': {
+        // Slingshot - Y-shaped wooden frame with rubber band
+        // Handle
+        add(new THREE.CylinderGeometry(0.018, 0.02, 0.2, 6), std(0x6B4226), [0, -0.35, 0]);
+        // Y-frame arms
+        for (const side of [-1, 1]) {
+          const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.15, 5), std(0x6B4226));
+          arm.position.set(side * 0.04, -0.2, 0);
+          arm.rotation.z = side * -0.4;
+          this.weaponMesh.add(arm);
+        }
+        // Rubber band
+        for (const side of [-1, 1]) {
+          const band = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.12, 4), std(0x332200));
+          band.position.set(side * 0.06, -0.17, 0.03);
+          band.rotation.x = 0.3;
+          this.weaponMesh.add(band);
+        }
+        // Pouch
+        add(new THREE.BoxGeometry(0.03, 0.02, 0.025), std(0x553322), [0, -0.18, 0.06]);
         break;
       }
       default: {

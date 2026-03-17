@@ -174,6 +174,50 @@ export const RECIPES = [
       }
     }
   },
+  {
+    id: 'sibat_craft',
+    name: 'Sibat (Spear)',
+    icon: '\u{1F531}',
+    desc: 'A bamboo spear with a sharpened metal tip. Long reach.',
+    materials: { scrap_metal: 2, ancient_wood: 1 },
+    result: {
+      type: 'weapon',
+      weapon: {
+        id: 'sibat', name: 'Sibat', icon: '\u{1F531}',
+        damage: 15, speed: 0.6, range: 3.5, durability: 100, maxDurability: 100,
+        type: 'melee', heavy: 28, desc: 'A bamboo spear with metal tip. Keeps enemies at distance.',
+        staminaCost: 9, heavyStaminaCost: 20
+      }
+    }
+  },
+  {
+    id: 'bangkaw_craft',
+    name: 'Bangkaw (Throwing Spear) x3',
+    icon: '\u{1F531}',
+    desc: 'Lightweight throwing spears. Consumable ranged weapon.',
+    materials: { scrap_metal: 1, ancient_wood: 1 },
+    result: {
+      type: 'consumable',
+      item: 'bangkaw',
+      count: 3
+    }
+  },
+  {
+    id: 'tirador_craft',
+    name: 'Tirador (Slingshot)',
+    icon: '\u{1F3AF}',
+    desc: 'A Y-shaped slingshot. Cheap ranged option.',
+    materials: { ancient_wood: 1, cloth_rag: 2 },
+    result: {
+      type: 'weapon',
+      weapon: {
+        id: 'tirador', name: 'Tirador', icon: '\u{1F3AF}',
+        damage: 10, speed: 0.5, range: 12, durability: 80, maxDurability: 80,
+        type: 'ranged', heavy: 18, desc: 'An improvised slingshot. Accurate at range.',
+        staminaCost: 5, heavyStaminaCost: 12
+      }
+    }
+  },
 ];
 
 export class CraftingSystem {
@@ -227,6 +271,27 @@ export class CraftingSystem {
       }
     }
 
+    return true;
+  }
+
+  repairWeapon(weaponIdx) {
+    const player = this.game.player;
+    const w = player.weapons[weaponIdx];
+    if (!w || w.durability === undefined) return false;
+    if (w.durability >= w.maxDurability) {
+      this.game.ui.addMessage(`${w.name} is already at full durability!`, 'system');
+      return false;
+    }
+    // Cost: 1 scrap_metal per repair
+    if (!player.hasItem('scrap_metal', 1)) {
+      this.game.ui.addMessage('Need 1 Scrap Metal to repair!', 'system');
+      return false;
+    }
+    player.removeItem('scrap_metal', 1);
+    const repairAmt = Math.floor(w.maxDurability * 0.4);
+    w.durability = Math.min(w.maxDurability, w.durability + repairAmt);
+    this.game.ui.addMessage(`Repaired ${w.name} (+${repairAmt} durability)`, 'loot');
+    this.game.ui.updateWeaponDisplay();
     return true;
   }
 }

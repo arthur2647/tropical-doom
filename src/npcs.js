@@ -275,6 +275,51 @@ const NPC_DEFS = {
         shop: 'skills',
       }
     }
+  },
+  merchant: {
+    name: 'Mang Berto',
+    title: 'Traveling Merchant',
+    position: [58, 0, 15],
+    color: 0xAA8844,
+    hp: 70, damage: 10, attackRange: 2, attackSpeed: 1.5, zoneRadius: 20,
+    combatStyle: 'melee',
+    ambientChatter: [
+      '*arranges his wares* Come, come! Best prices on the island!',
+      'Before all this, I sold goods between the villages. Now I sell survival.',
+      '*polishes a blade* Quality merchandise, my friend.',
+      'Gold for goods, goods for survival. That\'s the way of the world now.',
+      '*counts coins* Business is... well, at least I\'m alive.',
+      'I traded with the fishermen, the farmers, even the espiritista.',
+    ],
+    idleActivity: 'craft',
+    callouts: {
+      enemySpotted: ['Customers I do NOT want!', 'Protect the merchandise!'],
+      attacking: ['You picked the wrong merchant!', 'I didn\'t survive this long by being weak!'],
+      playerHurt: ['Don\'t die — you still owe me gold!', 'Stay alive, friend!'],
+      enemyKilled: ['Ha! No refunds!', 'That one\'s on the house.'],
+      downed: ['My goods... protect them...'],
+      revived: ['Back in business!'],
+    },
+    dialogues: {
+      initial: {
+        speaker: 'Mang Berto - Traveling Merchant',
+        lines: [
+          'Ay, another survivor! Mang Berto at your service — trader, merchant, and now apparently... arms dealer.',
+          'I used to sell rice and dried fish between the villages. Now? Weapons and armor.',
+          'Funny how the world changes. But gold is still gold, and I have what you need.',
+          'Come talk to me anytime. I\'ve got weapons, armor, and supplies for the right price.'
+        ],
+        onComplete: 'talk_merchant',
+        next: 'shop'
+      },
+      shop: {
+        speaker: 'Mang Berto - Traveling Merchant',
+        lines: [
+          'What can I get you today? Best prices on the island — well, only prices on the island!',
+        ],
+        shop: 'merchant',
+      }
+    }
   }
 };
 
@@ -625,6 +670,76 @@ function createNPCModel(def) {
       const sandal = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.14), mL(0x443322));
       sandal.position.set(side*0.08, 0.02, 0.02);
       group.add(sandal);
+    }
+
+  } else if (def === NPC_DEFS.merchant) {
+    // Mang Berto - Stout merchant, wearing a vest with many pockets, hat
+    // Torso - wider build, merchant vest
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.28), mL(0xAA8844));
+    torso.position.y = 0.92; torso.castShadow = true;
+    group.add(torso);
+    // Vest over shirt
+    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.45, 0.24), mL(0x664422));
+    vest.position.y = 0.94;
+    group.add(vest);
+    // Pockets on vest
+    for (const side of [-1, 1]) {
+      const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.01), mL(0x554411));
+      pocket.position.set(side * 0.12, 0.82, 0.13);
+      group.add(pocket);
+    }
+    // Head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 8), mL(skin));
+    head.position.set(0, 1.32, 0.02); head.scale.set(1, 1.05, 0.9);
+    group.add(head);
+    // Wide-brimmed hat (salakot-style)
+    const hatBrim = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 0.03, 8), mL(0x8B7355));
+    hatBrim.position.y = 1.42;
+    group.add(hatBrim);
+    const hatTop = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.12, 8), mL(0x8B7355));
+    hatTop.position.y = 1.5;
+    group.add(hatTop);
+    // Mustache
+    for (const side of [-1, 1]) {
+      const stache = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.02), mL(0x2a1a0a));
+      stache.position.set(side * 0.04, 1.24, 0.14);
+      stache.rotation.z = side * 0.2;
+      group.add(stache);
+    }
+    // Eyes - friendly squint
+    for (const side of [-1, 1]) {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.02, 4, 4), mL(0x221100));
+      eye.position.set(side * 0.055, 1.33, 0.14);
+      group.add(eye);
+    }
+    // Arms
+    for (const side of [-1, 1]) {
+      const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.2, 0.1), mL(0xAA8844));
+      sleeve.position.set(side * 0.28, 0.95, 0);
+      group.add(sleeve);
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.2, 0.09), mL(skin));
+      arm.position.set(side * 0.28, 0.75, 0);
+      arm.userData.isArm = true; arm.userData.side = side;
+      group.add(arm);
+    }
+    // Belt with pouches
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.06, 0.29), mL(0x443322));
+    belt.position.y = 0.68;
+    group.add(belt);
+    // Belt pouches
+    for (let i = 0; i < 3; i++) {
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.04), mL(0x553311));
+      pouch.position.set(-0.12 + i * 0.12, 0.64, 0.15);
+      group.add(pouch);
+    }
+    // Legs - work pants
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.35, 0.13), mL(0x5a5a44));
+      leg.position.set(side * 0.11, 0.4, 0);
+      group.add(leg);
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.04, 0.14), mL(0x443322));
+      shoe.position.set(side * 0.11, 0.02, 0.02);
+      group.add(shoe);
     }
 
   } else {
@@ -1207,6 +1322,11 @@ export class NPCManager {
         this.openSkillShop();
         return;
       }
+      if (dialogue.shop === 'merchant') {
+        this._inShop = true;
+        this.openMerchantShop();
+        return;
+      }
 
       this.currentDialogue = null;
       this.game.state = 2; // PLAYING
@@ -1242,6 +1362,73 @@ export class NPCManager {
         if (player.buySkill(skillId)) {
           this.openSkillShop(); // Refresh the shop UI
         }
+      });
+    });
+  }
+
+  openMerchantShop() {
+    const box = document.getElementById('dialogue-box');
+    const player = this.game.player;
+    document.getElementById('dialogue-speaker').textContent = 'Mang Berto - Shop';
+    document.getElementById('dialogue-text').textContent = `Your gold: ${player.gold}`;
+    document.getElementById('dialogue-continue').textContent = 'Click or press E to leave';
+
+    const shopItems = [
+      { type: 'weapon', name: 'Sibat (Spear)', price: 40, icon: '\u{1F531}',
+        desc: 'Long bamboo spear. Good reach.',
+        weapon: { id: 'sibat', name: 'Sibat', icon: '\u{1F531}', damage: 15, speed: 0.6, range: 3.5, durability: 100, maxDurability: 100, type: 'melee', heavy: 28, desc: 'A bamboo spear with metal tip. Keeps enemies at distance.', staminaCost: 9, heavyStaminaCost: 20 } },
+      { type: 'weapon', name: 'Tirador (Slingshot)', price: 30, icon: '\u{1F3AF}',
+        desc: 'Ranged slingshot. Cheap but reliable.',
+        weapon: { id: 'tirador', name: 'Tirador', icon: '\u{1F3AF}', damage: 10, speed: 0.5, range: 12, durability: 80, maxDurability: 80, type: 'ranged', heavy: 18, desc: 'An improvised slingshot. Accurate at range.', staminaCost: 5, heavyStaminaCost: 12 } },
+      { type: 'weapon', name: 'Bolo Machete', price: 60, icon: '\u{1FA93}',
+        desc: 'Sharp machete. The weapon of choice.',
+        weapon: { id: 'bolo', name: 'Bolo Machete', icon: '\u{1FA93}', damage: 18, speed: 0.45, range: 2.8, durability: 120, maxDurability: 120, type: 'melee', heavy: 30, desc: 'A sharp bolo machete. The weapon of choice in the tropics.', staminaCost: 10, heavyStaminaCost: 22 } },
+      { type: 'armor', name: 'Woven Vest (+3 DEF)', price: 35, icon: '\u{1F9E5}',
+        desc: 'Light cloth vest.',
+        armor: { id: 'woven_vest', name: 'Woven Vest', icon: '\u{1F9E5}', defense: 3, durability: 80, maxDurability: 80, desc: 'A vest woven from cloth.' } },
+      { type: 'armor', name: 'Reinforced Vest (+5 DEF)', price: 70, icon: '\u{1F9E5}',
+        desc: 'Metal-reinforced armor.',
+        armor: { id: 'reinforced_vest', name: 'Reinforced Vest', icon: '\u{1F9E5}', defense: 5, durability: 120, maxDurability: 120, desc: 'Cloth vest reinforced with scrap metal.' } },
+      { type: 'consumable', name: 'Bandage x3', price: 15, icon: '\u{1FA79}',
+        desc: 'Heals 30 HP.', itemId: 'bandage', count: 3 },
+      { type: 'consumable', name: 'Antidote x2', price: 20, icon: '\u{1F48A}',
+        desc: 'Cures poison, heals 15 HP.', itemId: 'antidote', count: 2 },
+      { type: 'consumable', name: 'Bangkaw x3', price: 25, icon: '\u{1F531}',
+        desc: 'Throwing spear. 40 damage.', itemId: 'bangkaw', count: 3 },
+      { type: 'consumable', name: 'Energy Drink x2', price: 20, icon: '\u{1F9CB}',
+        desc: 'Restores 80 stamina.', itemId: 'energy_drink', count: 2 },
+    ];
+
+    const optEl = document.getElementById('dialogue-options');
+    optEl.innerHTML = shopItems.map(item => {
+      const canAfford = player.gold >= item.price;
+      const style = canAfford ? '' : 'opacity:0.5;';
+      return `<div class="dial-opt shop-buy" style="${style}" data-item='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+        ${item.icon} ${item.name} — ${item.price} gold<br>
+        <span style="font-size:11px;color:#998877">${item.desc}</span>
+      </div>`;
+    }).join('');
+
+    optEl.querySelectorAll('.shop-buy').forEach(el => {
+      el.addEventListener('click', () => {
+        const item = JSON.parse(el.dataset.item);
+        if (player.gold < item.price) {
+          this.game.ui.addMessage('Not enough gold!', 'system');
+          return;
+        }
+        player.gold -= item.price;
+        if (item.type === 'weapon') {
+          if (!player.addWeapon({ ...item.weapon })) {
+            player.gold += item.price; // refund if weapon slots full
+            return;
+          }
+        } else if (item.type === 'armor') {
+          player.equipArmor({ ...item.armor });
+        } else if (item.type === 'consumable') {
+          player.addItem(item.itemId, item.count);
+          this.game.ui.addMessage(`Bought ${item.name}`, 'loot');
+        }
+        this.openMerchantShop(); // Refresh
       });
     });
   }

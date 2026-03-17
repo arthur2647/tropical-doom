@@ -322,5 +322,37 @@ export class UIManager {
         }
       });
     });
+
+    // --- Weapon Repair Section ---
+    const repairHTML = this.game.player.weapons
+      .map((w, i) => {
+        if (w.durability === undefined) return '';
+        const pct = Math.floor(w.durability / w.maxDurability * 100);
+        if (pct >= 100) return '';
+        const hasScrap = this.game.player.hasItem('scrap_metal', 1);
+        const style = hasScrap ? '' : ' unavailable';
+        return `<div class="craft-recipe${style}" data-repair="${i}">
+          <div class="craft-icon">\u{1F527}</div>
+          <div class="craft-info">
+            <div class="ci-name">Repair ${w.name}</div>
+            <div class="ci-desc">Restore ~40% durability (currently ${pct}%)</div>
+            <div class="ci-mats"><span style="color:${hasScrap ? '#558844' : '#884444'}">Scrap Metal ${hasScrap ? '1/1' : '0/1'}</span></div>
+          </div>
+        </div>`;
+      }).filter(h => h).join('');
+
+    if (repairHTML) {
+      listEl.innerHTML += `<div style="border-top:1px solid #333;margin-top:12px;padding-top:8px;color:#aaa;font-size:12px;letter-spacing:1px">REPAIR</div>` + repairHTML;
+      listEl.querySelectorAll('[data-repair]').forEach(el => {
+        if (!el.classList.contains('unavailable')) {
+          el.addEventListener('click', () => {
+            const idx = parseInt(el.dataset.repair);
+            if (this.game.craftingSystem.repairWeapon(idx)) {
+              this.renderCrafting();
+            }
+          });
+        }
+      });
+    }
   }
 }
