@@ -472,40 +472,62 @@ export class Player {
     this._move.addScaledVector(this._forward, -this.direction.z * moveSpeed * dt);
     this._move.addScaledVector(this._right, this.direction.x * moveSpeed * dt);
 
-    // Collision check
-    this._newPos.copy(cam.position).add(this._move);
-    if (this.checkCollision(this._newPos)) {
-      // Try sliding along walls
-      this._slidePos.set(cam.position.x + this._move.x, cam.position.y, cam.position.z);
-      if (!this.checkCollision(this._slidePos)) cam.position.copy(this._slidePos);
-      else {
-        this._slidePos.set(cam.position.x, cam.position.y, cam.position.z + this._move.z);
-        if (!this.checkCollision(this._slidePos)) cam.position.copy(this._slidePos);
+    // Physics-based movement: set velocity on physics body, cannon handles collisions
+    const physics = this.game.physics;
+    if (physics && physics.playerBody) {
+      const vx = this._move.x / dt;
+      const vz = this._move.z / dt;
+      physics.setPlayerVelocity(vx, vz);
+
+      // Gravity & ground — use physics body position for accurate x/z after collision
+      this.vertVelocity -= 20 * dt;
+      physics.playerBody.velocity.y = this.vertVelocity;
+
+      // Jump (before physics step resolves)
+      if (keys['Space'] && this.onGround) {
+        this.vertVelocity = 7;
+        this.onGround = false;
+        physics.setPlayerVerticalVelocity(7);
       }
+
+      // Ground snap happens in postPhysicsUpdate (called after physics.update)
     } else {
-      cam.position.copy(this._newPos);
-    }
+      // Fallback: original collision check (no physics)
+      this._newPos.copy(cam.position).add(this._move);
+      if (this.checkCollision(this._newPos)) {
+        this._slidePos.set(cam.position.x + this._move.x, cam.position.y, cam.position.z);
+        if (!this.checkCollision(this._slidePos)) cam.position.copy(this._slidePos);
+        else {
+          this._slidePos.set(cam.position.x, cam.position.y, cam.position.z + this._move.z);
+          if (!this.checkCollision(this._slidePos)) cam.position.copy(this._slidePos);
+        }
+      } else {
+        cam.position.copy(this._newPos);
+      }
 
-    // Gravity & ground
-    this.vertVelocity -= 20 * dt;
-    cam.position.y += this.vertVelocity * dt;
-    const groundH = this.getGroundHeight(cam.position.x, cam.position.z);
-    if (cam.position.y < groundH + 1.7) {
-      cam.position.y = groundH + 1.7;
-      this.vertVelocity = 0;
-      this.onGround = true;
-    }
+      this.vertVelocity -= 20 * dt;
+      cam.position.y += this.vertVelocity * dt;
+      const groundH = this.getGroundHeight(cam.position.x, cam.position.z);
+      if (cam.position.y < groundH + 1.7) {
+        cam.position.y = groundH + 1.7;
+        this.vertVelocity = 0;
+        this.onGround = true;
+      }
 
-    // Jump
-    if (keys['Space'] && this.onGround) {
-      this.vertVelocity = 7;
-      this.onGround = false;
+      if (keys['Space'] && this.onGround) {
+        this.vertVelocity = 7;
+        this.onGround = false;
+      }
     }
 
     // Keep in bounds
     const bounds = 145;
     cam.position.x = THREE.MathUtils.clamp(cam.position.x, -bounds, bounds);
     cam.position.z = THREE.MathUtils.clamp(cam.position.z, -bounds, bounds);
+    if (physics && physics.playerBody) {
+      physics.playerBody.position.x = THREE.MathUtils.clamp(physics.playerBody.position.x, -bounds, bounds);
+      physics.playerBody.position.z = THREE.MathUtils.clamp(physics.playerBody.position.z, -bounds, bounds);
+    }
 
     // Attack cooldown
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
@@ -568,6 +590,22 @@ export class Player {
 
     // Update region
     this.updateRegion();
+  }
+
+  // Called after physics.update() to snap player to ground/platforms
+  postPhysicsUpdate() {
+    const cam = this.game.camera;
+    const physics = this.game.physics;
+    if (!physics || !physics.playerBody) return;
+
+    const groundH = this.getGroundHeight(cam.position.x, cam.position.z);
+    if (cam.position.y < groundH + 1.7) {
+      cam.position.y = groundH + 1.7;
+      this.vertVelocity = 0;
+      this.onGround = true;
+      physics.playerBody.position.y = cam.position.y - 1.35;
+      physics.playerBody.velocity.y = 0;
+    }
   }
 
   checkCollision(pos) {

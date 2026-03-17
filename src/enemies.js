@@ -986,6 +986,8 @@ export class EnemyManager {
       dropItems: this.getDrops(type),
     };
     this.enemies.push(enemy);
+    // Register with physics world
+    if (this.game.physics) this.game.physics.addEnemyBody(enemy);
     return enemy;
   }
 
@@ -1175,6 +1177,7 @@ export class EnemyManager {
       // Too far away - despawn (but never despawn bosses)
       if (dist > 100 && !e.def.boss) {
         this.game.scene.remove(e.model);
+        if (this.game.physics) this.game.physics.removeEnemyBody(e);
         this.enemies.splice(i, 1);
       }
     }
@@ -1271,6 +1274,7 @@ export class EnemyManager {
 
   killEnemy(e) {
     e.state = 'dead';
+    if (this.game.physics) this.game.physics.removeEnemyBody(e);
     this.game.audioManager.playEnemyDeath();
     this.game.kills++;
     this.game.player.addXP(e.def.xp);

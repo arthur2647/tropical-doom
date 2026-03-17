@@ -12,7 +12,7 @@ export const REGIONS = [
 ];
 
 // --- Cached terrain height grid ---
-const GRID_RES = 300; // grid cells
+const GRID_RES = 600; // grid cells (higher res for smoother height lookups)
 const GRID_SIZE = 300; // world units
 const HALF_GRID = GRID_SIZE / 2;
 let heightGrid = null;
@@ -41,19 +41,61 @@ function smoothNoise(x, y, scale) {
   return a*(1-u)*(1-v) + b*u*(1-v) + c*(1-u)*v + d*u*v;
 }
 
-function fbm(x, y, octaves = 4) {
+function fbm(x, y, octaves = 6) {
   let val = 0, amp = 0.5, freq = 1;
   for (let i = 0; i < octaves; i++) {
     val += amp * smoothNoise(x * freq, y * freq, 1);
-    amp *= 0.5; freq *= 2;
+    amp *= 0.48; freq *= 2.1;
+  }
+  return val;
+}
+
+// Ridged noise for mountain/cliff features
+function ridgedNoise(x, y, octaves = 4) {
+  let val = 0, amp = 0.5, freq = 1;
+  for (let i = 0; i < octaves; i++) {
+    let n = smoothNoise(x * freq, y * freq, 1);
+    n = 1.0 - Math.abs(n * 2 - 1); // ridge
+    n = n * n; // sharpen ridges
+    val += amp * n;
+    amp *= 0.45; freq *= 2.2;
   }
   return val;
 }
 
 function terrainHeight(x, z) {
   let h = 0;
-  h += fbm(x * 0.015, z * 0.015) * 8;
-  h += fbm(x * 0.04, z * 0.04) * 3;
+
+  // Large-scale rolling hills (6 octaves for more detail)
+  h += fbm(x * 0.012, z * 0.012, 6) * 10;
+  // Mid-frequency bumps
+  h += fbm(x * 0.035, z * 0.035, 4) * 3.5;
+  // Fine detail - small rocks and ground variation
+  h += fbm(x * 0.1, z * 0.1, 3) * 0.8;
+
+  // Ridged features for cliff/jungle elevation
+  const jungleDist = Math.sqrt((x + 50) * (x + 50) + (z - 50) * (z - 50));
+  if (jungleDist < 40) {
+    const jBlend = Math.max(0, 1 - jungleDist / 40);
+    h += ridgedNoise(x * 0.02, z * 0.02, 4) * 6 * jBlend;
+  }
+
+  // Temple area - raised rocky plateau
+  const templeDist = Math.sqrt((x + 60) * (x + 60) + (z + 60) * (z + 60));
+  if (templeDist < 25) {
+    const tBlend = Math.max(0, 1 - templeDist / 25);
+    h += tBlend * 6;
+    h += ridgedNoise(x * 0.04, z * 0.04, 3) * 2 * tBlend;
+  }
+
+  // Cliff path - rocky ridge
+  const cliffDist = Math.sqrt((x + 80) * (x + 80) + z * z);
+  if (cliffDist < 25) {
+    const cBlend = Math.max(0, 1 - cliffDist / 25);
+    h += ridgedNoise(x * 0.03, z * 0.03, 3) * 4 * cBlend;
+  }
+
+  // Edge of island fades to water
   const distFromCenter = Math.sqrt(x * x + z * z);
   const edgeFade = Math.max(0, 1 - distFromCenter / 140);
   h *= edgeFade;
@@ -61,15 +103,28 @@ function terrainHeight(x, z) {
     const beachFade = Math.max(0, (distFromCenter - 110) / 30);
     h = h * (1 - beachFade) + (-0.5) * beachFade;
   }
+
+  // Resort area - flatten for building
   const resortDist = Math.sqrt(x * x + z * z);
   if (resortDist < 20) {
     const flat = 1 - resortDist / 20;
-    h = h * (1 - flat * 0.7);
+    h = h * (1 - flat * 0.8);
   }
-  const templeDist = Math.sqrt((x + 60) * (x + 60) + (z + 60) * (z + 60));
-  if (templeDist < 20) h += (1 - templeDist / 20) * 5;
-  const jungleDist = Math.sqrt((x + 50) * (x + 50) + (z - 50) * (z - 50));
-  if (jungleDist < 30) h += (1 - jungleDist / 30) * 4;
+
+  // Village area - gently flatten
+  const villageDist = Math.sqrt((x - 60) * (x - 60) + (z - 20) * (z - 20));
+  if (villageDist < 18) {
+    const vFlat = 1 - villageDist / 18;
+    h = h * (1 - vFlat * 0.5);
+  }
+
+  // Cove area - dip down toward water
+  const coveDist = Math.sqrt((x - 85) * (x - 85) + (z + 65) * (z + 65));
+  if (coveDist < 15) {
+    const cFlat = 1 - coveDist / 15;
+    h *= (1 - cFlat * 0.6);
+  }
+
   return h;
 }
 
@@ -173,8 +228,8 @@ export function createWorld(game) {
   const hemiLight = new THREE.HemisphereLight(0x87ceeb, 0x3a5f0b, 0.5);
   scene.add(hemiLight);
 
-  // Terrain - reduced resolution
-  const terrainGeo = new THREE.PlaneGeometry(300, 300, 80, 80);
+  // Terrain - higher resolution for detailed terrain
+  const terrainGeo = new THREE.PlaneGeometry(300, 300, 200, 200);
   terrainGeo.rotateX(-Math.PI / 2);
   const verts = terrainGeo.attributes.position;
 
@@ -184,22 +239,78 @@ export function createWorld(game) {
   }
   terrainGeo.computeVertexNormals();
 
-  // Vertex colors
+  // Vertex colors with slope-based blending (grass, dirt, rock, sand)
+  const normals = terrainGeo.attributes.normal;
   const colors = new Float32Array(verts.count * 3);
   for (let i = 0; i < verts.count; i++) {
     const x = verts.getX(i), z = verts.getZ(i), h = verts.getY(i);
+    const ny = normals.getY(i); // steepness: 1 = flat, 0 = vertical
+    const slope = 1 - ny; // 0 = flat, 1 = cliff
     const dist = Math.sqrt(x * x + z * z);
+
+    // Detail noise for variation
+    const n1 = noise2d(x * 0.1, z * 0.1) * 0.06;
+    const n2 = noise2d(x * 0.3, z * 0.3) * 0.03;
+    const detail = n1 + n2;
+
     let r, g, b;
-    if (dist > 105) { r = 0.88; g = 0.8; b = 0.58; }
-    else if (h > 5) { r = 0.15; g = 0.4; b = 0.1; }
-    else { r = 0.25; g = 0.55; b = 0.15; }
-    const n = noise2d(x * 0.1, z * 0.1) * 0.08;
-    colors[i * 3] = r + n; colors[i * 3 + 1] = g + n * 0.5; colors[i * 3 + 2] = b + n * 0.3;
+
+    if (dist > 105) {
+      // Beach sand
+      r = 0.88; g = 0.8; b = 0.58;
+      // Wet sand near water
+      if (dist > 120) { r *= 0.85; g *= 0.85; b *= 0.8; }
+    } else if (slope > 0.4) {
+      // Rocky cliff face
+      r = 0.45; g = 0.42; b = 0.38;
+      // Add lichen streaks
+      const lichen = noise2d(x * 0.2, z * 0.15);
+      if (lichen > 0.6) { r -= 0.05; g += 0.05; b -= 0.03; }
+    } else if (slope > 0.15) {
+      // Dirt/exposed earth on slopes
+      const dirtBlend = (slope - 0.15) / 0.25;
+      // Blend grass to dirt
+      r = 0.25 * (1 - dirtBlend) + 0.42 * dirtBlend;
+      g = 0.55 * (1 - dirtBlend) + 0.32 * dirtBlend;
+      b = 0.15 * (1 - dirtBlend) + 0.18 * dirtBlend;
+    } else if (h > 6) {
+      // Highland dense jungle (darker green)
+      r = 0.12; g = 0.35; b = 0.08;
+    } else if (h > 2) {
+      // Mid-elevation grass
+      r = 0.2; g = 0.5; b = 0.12;
+    } else {
+      // Lowland grass (lighter, more tropical)
+      r = 0.28; g = 0.58; b = 0.18;
+    }
+
+    // Region-specific tinting
+    const jungleDist = Math.sqrt((x + 50) * (x + 50) + (z - 50) * (z - 50));
+    if (jungleDist < 30 && dist < 105) {
+      const jt = Math.max(0, 1 - jungleDist / 30) * 0.3;
+      r = r * (1 - jt) + 0.08 * jt;
+      g = g * (1 - jt) + 0.3 * jt;
+      b = b * (1 - jt) + 0.05 * jt;
+    }
+
+    // Swamp area - muddy brown-green
+    const swampDist = Math.sqrt((x - 40) * (x - 40) + (z - 70) * (z - 70));
+    if (swampDist < 20 && dist < 105) {
+      const st = Math.max(0, 1 - swampDist / 20) * 0.4;
+      r = r * (1 - st) + 0.3 * st;
+      g = g * (1 - st) + 0.35 * st;
+      b = b * (1 - st) + 0.15 * st;
+    }
+
+    colors[i * 3] = r + detail;
+    colors[i * 3 + 1] = g + detail * 0.5;
+    colors[i * 3 + 2] = b + detail * 0.3;
   }
   terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
   const terrain = new THREE.Mesh(terrainGeo, new THREE.MeshStandardMaterial({
-    vertexColors: true, roughness: 0.9, metalness: 0
+    vertexColors: true, roughness: 0.85, metalness: 0,
+    flatShading: false,
   }));
   terrain.receiveShadow = true;
   scene.add(terrain);

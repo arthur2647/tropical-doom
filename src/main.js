@@ -4,6 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { createWorld, REGIONS, updateMinimap, updateEnvironment } from './world.js';
 import { Player } from './player.js';
 import { EnemyManager } from './enemies.js';
@@ -15,6 +16,7 @@ import { CraftingSystem } from './crafting.js';
 import { AudioManager } from './audio.js';
 import { WeatherSystem } from './weather.js';
 import { TouchControls } from './touch.js';
+import { PhysicsWorld } from './physics.js';
 
 // --- Game State ---
 const GameState = {
@@ -53,34 +55,65 @@ class Game {
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.bloomPass = new UnrealBloomPass(
       new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.3, // strength - subtle bloom
-      0.6, // radius
-      0.85  // threshold - only bright things bloom
+      0.4, // strength - slightly stronger bloom for glowing effects
+      0.7, // radius
+      0.8  // threshold - torches, fire, amulets bloom nicely
     );
     this.composer.addPass(this.bloomPass);
 
-    // Vignette + color grading pass
+    // SSAO - ambient occlusion for depth and grounding
+    this.ssaoPass = new SSAOPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
+    this.ssaoPass.kernelRadius = 12;
+    this.ssaoPass.minDistance = 0.001;
+    this.ssaoPass.maxDistance = 0.15;
+    this.ssaoPass.output = SSAOPass.OUTPUT.Default;
+    this.composer.addPass(this.ssaoPass);
+
+    // Vignette + color grading + film grain pass
     const vignetteShader = {
       uniforms: {
         tDiffuse: { value: null },
-        darkness: { value: 0.5 },
-        offset: { value: 1.2 },
+        darkness: { value: 0.6 },
+        offset: { value: 1.1 },
+        time: { value: 0.0 },
+        grainIntensity: { value: 0.06 },
       },
       vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
       fragmentShader: `
         uniform sampler2D tDiffuse;
         uniform float darkness;
         uniform float offset;
+        uniform float time;
+        uniform float grainIntensity;
         varying vec2 vUv;
+
+        // Simple hash for film grain
+        float hash(vec2 p) {
+          vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+          p3 += dot(p3, p3.yzx + 33.33);
+          return fract((p3.x + p3.y) * p3.z);
+        }
+
         void main() {
           vec4 color = texture2D(tDiffuse, vUv);
+
+          // Vignette
           vec2 uv = (vUv - 0.5) * 2.0;
           float vig = 1.0 - dot(uv, uv) * darkness;
           vig = clamp(pow(vig, 1.5), 0.0, 1.0);
           color.rgb *= vig;
-          // Subtle warm color grading
-          color.r *= 1.02;
-          color.b *= 0.97;
+
+          // Warm tropical color grading
+          color.r *= 1.04;
+          color.g *= 1.01;
+          color.b *= 0.95;
+          // Slight contrast boost
+          color.rgb = mix(vec3(0.5), color.rgb, 1.08);
+
+          // Film grain
+          float grain = hash(vUv * 500.0 + fract(time * 13.7)) * 2.0 - 1.0;
+          color.rgb += grain * grainIntensity;
+
           gl_FragColor = color;
         }`
     };
@@ -215,6 +248,7 @@ class Game {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.composer.setSize(window.innerWidth, window.innerHeight);
+      if (this.ssaoPass) this.ssaoPass.setSize(window.innerWidth, window.innerHeight);
     });
   }
 
@@ -264,6 +298,16 @@ class Game {
     this.weather.init();
     this.audioManager.init();
 
+    // Initialize physics
+    this.physics = new PhysicsWorld(this);
+    this.physics.initTerrain();
+    this.physics.initColliders();
+
+    // Add enemy bodies to physics world
+    for (const e of this.enemyManager.enemies) {
+      this.physics.addEnemyBody(e);
+    }
+
     // Pre-compile all shaders to avoid lag spikes when encountering new materials
     this.renderer.compile(this.scene, this.camera);
 
@@ -272,6 +316,7 @@ class Game {
     this.spawnName = spawn.name;
     const spawnY = 1.7;
     this.camera.position.set(spawn.x, spawnY, spawn.z);
+    this.physics.initPlayer();
     loadBar.style.width = '100%';
     await this.sleep(300);
 
@@ -473,6 +518,10 @@ class Game {
       this.touch.applyToPlayer(this.player, this.camera, dt);
       this.updateDayNight(dt);
       this.player.update(dt);
+      if (this.physics) {
+        this.physics.update(dt);
+        this.player.postPhysicsUpdate();
+      }
       this.enemyManager.update(dt);
       this.npcManager.update(dt);
       this.itemManager.update(dt);
@@ -520,12 +569,14 @@ class Game {
 
     // Bloom intensity adjusts with time of day
     if (this.bloomPass) {
-      this.bloomPass.strength = this.isNight ? 0.5 : 0.25;
+      this.bloomPass.strength = this.isNight ? 0.6 : 0.3;
     }
 
-    // Vignette darkens at night
+    // Vignette/grain adjusts at night
     if (this.vignettePass) {
-      this.vignettePass.uniforms.darkness.value = this.isNight ? 0.7 : 0.4;
+      this.vignettePass.uniforms.darkness.value = this.isNight ? 0.8 : 0.5;
+      this.vignettePass.uniforms.time.value = this.totalTime;
+      this.vignettePass.uniforms.grainIntensity.value = this.isNight ? 0.09 : 0.04;
     }
 
     this.composer.render();
@@ -689,37 +740,44 @@ class Game {
     this.audioManager.playHit();
     this.cameraShake = 0.3;
 
-    // Spawn debris particles
     const pos = d.mesh.position;
-    const debrisCount = 6 + Math.floor(Math.random() * 6);
-    const debrisGroup = new THREE.Group();
-    debrisGroup.position.copy(pos);
     const color = d.color || 0x8B7355;
-    for (let i = 0; i < debrisCount; i++) {
-      const size = 0.05 + Math.random() * 0.15;
-      const piece = new THREE.Mesh(
-        new THREE.BoxGeometry(size, size, size),
-        new THREE.MeshLambertMaterial({ color })
-      );
-      piece.position.set(
-        (Math.random() - 0.5) * 0.5,
-        Math.random() * 0.5,
-        (Math.random() - 0.5) * 0.5
-      );
-      piece.userData.vel = new THREE.Vector3(
-        (Math.random() - 0.5) * 6,
-        3 + Math.random() * 4,
-        (Math.random() - 0.5) * 6
-      );
-      piece.userData.rotVel = new THREE.Vector3(
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 10
-      );
-      debrisGroup.add(piece);
+
+    // Spawn physics-driven debris if physics is available, otherwise fallback
+    if (this.physics) {
+      const debrisCount = 6 + Math.floor(Math.random() * 6);
+      this.physics.spawnDebris(pos.x, pos.y, pos.z, color, debrisCount);
+    } else {
+      // Fallback: simple particle debris
+      const debrisCount = 6 + Math.floor(Math.random() * 6);
+      const debrisGroup = new THREE.Group();
+      debrisGroup.position.copy(pos);
+      for (let i = 0; i < debrisCount; i++) {
+        const size = 0.05 + Math.random() * 0.15;
+        const piece = new THREE.Mesh(
+          new THREE.BoxGeometry(size, size, size),
+          new THREE.MeshLambertMaterial({ color })
+        );
+        piece.position.set(
+          (Math.random() - 0.5) * 0.5,
+          Math.random() * 0.5,
+          (Math.random() - 0.5) * 0.5
+        );
+        piece.userData.vel = new THREE.Vector3(
+          (Math.random() - 0.5) * 6,
+          3 + Math.random() * 4,
+          (Math.random() - 0.5) * 6
+        );
+        piece.userData.rotVel = new THREE.Vector3(
+          (Math.random() - 0.5) * 10,
+          (Math.random() - 0.5) * 10,
+          (Math.random() - 0.5) * 10
+        );
+        debrisGroup.add(piece);
+      }
+      this.scene.add(debrisGroup);
+      this._debrisParticles.push({ group: debrisGroup, life: 2.0 });
     }
-    this.scene.add(debrisGroup);
-    this._debrisParticles.push({ group: debrisGroup, life: 2.0 });
 
     // Drop items
     if (d.drops) {
