@@ -809,6 +809,8 @@ class Game {
     this.scene.remove(d.mesh);
     // Remove from colliders if it had one
     if (d.colliderIdx !== undefined && this.colliders[d.colliderIdx]) {
+      // Remove the cannon physics body so player doesn't collide with ghost
+      if (this.physics) this.physics.removeColliderBody(d.colliderIdx);
       this.colliders.splice(d.colliderIdx, 1);
       // Update remaining indices
       for (const dd of this.destructibles) {

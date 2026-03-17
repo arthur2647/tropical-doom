@@ -740,7 +740,7 @@ export class Player {
     const cam = this.game.camera;
     cam.getWorldDirection(this._attackDir);
     if (w.type === 'melee') {
-      this.game.enemyManager.meleeHit(cam.position, this._attackDir, w.range, finalDmg);
+      this.game.enemyManager.meleeHit(cam.position, this._attackDir, w.range, finalDmg, w.id, heavy);
     } else {
       this.game.enemyManager.rangedHit(cam.position, this._attackDir, w.range, finalDmg);
     }

@@ -231,9 +231,10 @@ export class CraftingSystem {
     for (const [matId, count] of Object.entries(recipe.materials)) {
       if (!player.hasItem(matId, count)) return false;
     }
-    // Check weapon requirement
+    // Check weapon requirement (also accept prefixed variants like 'bolo_rusty')
     if (recipe.requires) {
-      if (!player.weapons.some(w => w.id === recipe.requires)) return false;
+      const base = recipe.requires;
+      if (!player.weapons.some(w => w.id === base || (w.id.startsWith(base + '_') && w.id !== base))) return false;
     }
     return true;
   }

@@ -591,9 +591,11 @@ export class ItemManager {
     for (const item of this.items) {
       item.time += dt;
       // Gentle bob, slow rotation
-      const baseY = item.model.position.y;
-      item.model.children[0].position.y = Math.sin(item.time * 1.5) * 0.04;
-      item.model.children[0].rotation.y += dt * 0.8;
+      const child = item.model.children[0];
+      if (child) {
+        child.position.y = Math.sin(item.time * 1.5) * 0.04;
+        child.rotation.y += dt * 0.8;
+      }
     }
   }
 }

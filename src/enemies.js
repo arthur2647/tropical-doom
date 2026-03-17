@@ -1196,11 +1196,22 @@ export class EnemyManager {
       e.attackCooldown -= dt;
       if (e.hitFlash > 0) e.hitFlash -= dt * 3;
 
-      // Stun timer (from Battle Cry skill)
+      // Stun timer (from Battle Cry skill or Electro Blade)
       if (e.stunTimer > 0) {
         e.stunTimer -= dt;
         if (e.stunTimer <= 0) e.state = 'chase';
         continue; // Skip AI while stunned
+      }
+
+      // Poison DOT (from Venomous Machete)
+      if (e.poisonTimer > 0) {
+        e.poisonTimer -= dt;
+        e._poisonTick = (e._poisonTick || 0) + dt;
+        if (e._poisonTick >= 1) {
+          e._poisonTick -= 1;
+          this.damageEnemy(e, e.poisonDmg || 3);
+          if (e.state === 'dead') continue;
+        }
       }
 
       // Distance to player
@@ -1334,7 +1345,7 @@ export class EnemyManager {
     }
   }
 
-  meleeHit(origin, direction, range, damage) {
+  meleeHit(origin, direction, range, damage, weaponId, heavy) {
     let hit = false;
     this._meleeDir.set(direction.x, 0, direction.z).normalize();
     for (const e of this.enemies) {
@@ -1350,6 +1361,20 @@ export class EnemyManager {
       if (dot < 0.5) continue; // ~60 degree cone
 
       this.damageEnemy(e, damage);
+
+      // Electro Blade: stun on heavy attacks
+      if (weaponId === 'electro_blade' && heavy) {
+        e.stunTimer = 1.5;
+        e.state = 'idle';
+        this.game.ui.addMessage(`${e.def.name} stunned by electric shock!`, 'combat');
+      }
+
+      // Poison Blade: apply poison DOT
+      if (weaponId === 'poison_blade') {
+        e.poisonTimer = 4; // 4 seconds of poison
+        e.poisonDmg = 3;   // damage per tick
+      }
+
       hit = true;
     }
     // Also damage destructibles

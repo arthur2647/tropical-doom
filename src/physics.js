@@ -78,6 +78,7 @@ export class PhysicsWorld {
 
   // Convert existing game.colliders (THREE.Box3) to cannon static bodies
   initColliders() {
+    this.colliderBodies = [];
     if (!this.game.colliders) return;
     for (const box of this.game.colliders) {
       const center = new THREE.Vector3();
@@ -94,7 +95,16 @@ export class PhysicsWorld {
       });
       body.collisionFilterGroup = 1;
       this.world.addBody(body);
+      this.colliderBodies.push(body);
     }
+  }
+
+  // Remove a collider's cannon body by index (when destructible is destroyed)
+  removeColliderBody(idx) {
+    if (!this.colliderBodies || idx < 0 || idx >= this.colliderBodies.length) return;
+    const body = this.colliderBodies[idx];
+    if (body) this.world.removeBody(body);
+    this.colliderBodies.splice(idx, 1);
   }
 
   // Create player physics body (sphere for smooth wall sliding)
