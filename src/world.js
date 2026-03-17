@@ -247,6 +247,8 @@ export function createWorld(game) {
   buildSwamp(game);
   buildCove(game);
 
+  placeDestructibles(game);
+
   // Scatter nature - REDUCED counts
   scatterPalmTrees(game, 70);
   scatterJungleTrees(game, 35);
@@ -1172,6 +1174,149 @@ function buildCove(game) {
     addCylinder(game, ox - 0.8, gy + 0.5, oz - 2 - i * 2, 0.08, 0.1, 1.5, 0x5C4033);
     addCylinder(game, ox + 0.8, gy + 0.5, oz - 2 - i * 2, 0.08, 0.1, 1.5, 0x5C4033);
   }
+}
+
+// --- DESTRUCTIBLES ---
+function placeDestructibles(game) {
+  function addDestructible(x, y, z, w, h, d, color, name, hp, drops, opts = {}) {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    const mat = getMat(color);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    if (opts.rotY) mesh.rotation.y = opts.rotY;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    game.scene.add(mesh);
+
+    let colliderIdx;
+    if (opts.collider !== false) {
+      const box = new THREE.Box3().setFromObject(mesh);
+      colliderIdx = game.colliders.length;
+      game.colliders.push(box);
+    }
+
+    game.destructibles.push({ mesh, hp, name, color, drops, colliderIdx, destroyed: false });
+    return mesh;
+  }
+
+  function addBarrel(x, z, color, drops) {
+    const gy = getTerrainHeightFast(x, z);
+    const geo = new THREE.CylinderGeometry(0.35, 0.4, 1.0, 8);
+    const mat = getMat(color);
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, gy + 0.5, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    game.scene.add(mesh);
+    const box = new THREE.Box3().setFromObject(mesh);
+    const colliderIdx = game.colliders.length;
+    game.colliders.push(box);
+    game.destructibles.push({ mesh, hp: 15, name: 'Barrel', color, drops, colliderIdx, destroyed: false });
+  }
+
+  const gY = 0.5; // resort ground
+
+  // Resort area - crates near tiki bar
+  addDestructible(17, gY + 0.4, -7, 0.8, 0.8, 0.8, 0x8B6914, 'Wooden Crate', 20, [
+    { id: 'scrap_metal', chance: 0.6 }, { id: 'bandage', chance: 0.4 }
+  ]);
+  addDestructible(18, gY + 0.4, -6, 0.7, 0.7, 0.7, 0x7B5B3A, 'Wooden Crate', 18, [
+    { id: 'cloth_rag', chance: 0.5 }, { id: 'energy_drink', chance: 0.3 }
+  ]);
+  // Stacked crate
+  addDestructible(17, gY + 1.1, -7, 0.6, 0.6, 0.6, 0x6B4226, 'Wooden Crate', 15, [
+    { id: 'wire', chance: 0.5 }, { id: 'duct_tape', chance: 0.4 }
+  ]);
+
+  // Barrels near resort pool
+  addBarrel(13, 8, 0x884422, [
+    { id: 'coconut', chance: 0.6 }, { id: 'buko_juice', chance: 0.4 }
+  ]);
+  addBarrel(13, 6, 0x666655, [
+    { id: 'scrap_metal', chance: 0.5 }, { id: 'battery', chance: 0.3 }
+  ]);
+
+  // Resort lobby - breakable table
+  addDestructible(-12, gY + 0.35, -3, 1.2, 0.7, 0.8, 0x6B4226, 'Table', 12, [
+    { id: 'ancient_wood', chance: 0.3 }, { id: 'cloth_rag', chance: 0.5 }
+  ]);
+
+  // Village area - crates and barrels scattered around
+  const vox = 60, voz = 20;
+  addDestructible(vox + 3, getTerrainHeightFast(vox + 3, voz - 2) + 0.4, voz - 2,
+    0.8, 0.8, 0.8, 0xAA8855, 'Supply Crate', 25, [
+    { id: 'herbs', chance: 0.6 }, { id: 'bandage', chance: 0.5 }, { id: 'coconut', chance: 0.4 }
+  ]);
+  addDestructible(vox - 4, getTerrainHeightFast(vox - 4, voz + 5) + 0.4, voz + 5,
+    0.7, 0.7, 0.7, 0x7B5B3A, 'Wooden Crate', 18, [
+    { id: 'cloth_rag', chance: 0.5 }, { id: 'sharp_bone', chance: 0.3 }
+  ]);
+  addBarrel(vox + 6, voz + 3, 0x6B4226, [
+    { id: 'herbs', chance: 0.5 }, { id: 'antidote', chance: 0.3 }
+  ]);
+  addBarrel(vox - 2, voz - 6, 0x554433, [
+    { id: 'buko_juice', chance: 0.5 }, { id: 'coconut', chance: 0.4 }
+  ]);
+
+  // Wooden fence segments near village (multiple pieces to blow apart)
+  for (let i = 0; i < 4; i++) {
+    addDestructible(vox + 15 + i * 1.2, getTerrainHeightFast(vox + 15, voz - 10) + 0.5, voz - 10,
+      1.0, 1.0, 0.15, 0x8B7355, 'Wooden Fence', 10, [
+      { id: 'ancient_wood', chance: 0.3 }
+    ]);
+  }
+
+  // Jungle area - old crates and debris
+  const jx = -40, jz = 55;
+  addDestructible(jx + 5, getTerrainHeightFast(jx + 5, jz) + 0.4, jz,
+    0.9, 0.9, 0.9, 0x5C4033, 'Rotting Crate', 12, [
+    { id: 'herbs', chance: 0.7 }, { id: 'antidote', chance: 0.4 }
+  ]);
+  addDestructible(jx - 8, getTerrainHeightFast(jx - 8, jz + 10) + 0.4, jz + 10,
+    0.8, 0.8, 0.8, 0x4A3728, 'Old Crate', 14, [
+    { id: 'ancient_wood', chance: 0.5 }, { id: 'dark_essence', chance: 0.2 }
+  ]);
+  addBarrel(jx + 2, jz - 8, 0x3D2B1F, [
+    { id: 'herbs', chance: 0.6 }, { id: 'thick_hide', chance: 0.3 }
+  ]);
+
+  // Temple area - ancient containers
+  const tx = -55, tz = -55;
+  addDestructible(tx + 3, getTerrainHeightFast(tx + 3, tz + 2) + 0.5, tz + 2,
+    1.0, 1.0, 1.0, 0x777777, 'Stone Urn', 35, [
+    { id: 'sacred_crystal', chance: 0.3 }, { id: 'dark_essence', chance: 0.5 }
+  ]);
+  addDestructible(tx - 3, getTerrainHeightFast(tx - 3, tz + 2) + 0.5, tz + 2,
+    1.0, 1.0, 1.0, 0x777777, 'Stone Urn', 35, [
+    { id: 'sacred_crystal', chance: 0.3 }, { id: 'ancient_wood', chance: 0.4 }
+  ]);
+  addDestructible(tx, getTerrainHeightFast(tx, tz - 8) + 0.35, tz - 8,
+    0.7, 0.7, 0.7, 0x555555, 'Ancient Pot', 25, [
+    { id: 'dark_essence', chance: 0.6 }, { id: 'herbs', chance: 0.4 }
+  ]);
+
+  // Swamp area
+  const sx = 40, sz = -50;
+  addBarrel(sx + 5, sz + 3, 0x445533, [
+    { id: 'antidote', chance: 0.5 }, { id: 'herbs', chance: 0.6 }
+  ]);
+  addDestructible(sx - 3, getTerrainHeightFast(sx - 3, sz - 2) + 0.4, sz - 2,
+    0.8, 0.8, 0.8, 0x4A3728, 'Mossy Crate', 16, [
+    { id: 'thick_hide', chance: 0.4 }, { id: 'sharp_bone', chance: 0.3 }
+  ]);
+
+  // Cove area - pirate-style barrels and crates
+  const cox = 85, coz = -65;
+  addBarrel(cox + 3, coz - 3, 0x6B4226, [
+    { id: 'scrap_metal', chance: 0.6 }, { id: 'wire', chance: 0.4 }
+  ]);
+  addBarrel(cox + 3, coz - 5, 0x554433, [
+    { id: 'battery', chance: 0.4 }, { id: 'duct_tape', chance: 0.5 }
+  ]);
+  addDestructible(cox - 2, getTerrainHeightFast(cox - 2, coz - 7) + 0.4, coz - 7,
+    0.9, 0.9, 0.9, 0x8B6914, 'Cargo Crate', 22, [
+    { id: 'scrap_metal', chance: 0.5 }, { id: 'energy_drink', chance: 0.3 }, { id: 'bandage', chance: 0.4 }
+  ]);
 }
 
 // --- SCATTER ---

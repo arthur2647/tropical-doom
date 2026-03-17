@@ -1171,6 +1171,8 @@ export class EnemyManager {
       this.damageEnemy(e, damage);
       hit = true;
     }
+    // Also damage destructibles
+    this.game.damageDestructibleMelee(origin, direction, range, damage);
     if (!hit) {
       this.game.audioManager.playSwing();
     }
@@ -1184,6 +1186,8 @@ export class EnemyManager {
         this.damageEnemy(e, damage);
       }
     }
+    // Also damage destructibles
+    this.game.damageDestructiblesInRange(center, radius, damage);
   }
 
   rangedHit(origin, direction, range, damage) {

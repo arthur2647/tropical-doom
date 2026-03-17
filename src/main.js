@@ -123,6 +123,8 @@ class Game {
     this.touch = new TouchControls(this);
 
     this.interactables = [];
+    this.destructibles = [];
+    this._debrisParticles = []; // active debris effects
 
     // Tutorial system
     this.tutorial = {
@@ -504,6 +506,9 @@ class Game {
         const breathe = Math.sin(this.totalTime * 1.5) * 0.002;
         this.camera.position.y += breathe;
       }
+
+      // --- Update debris particles ---
+      this.updateDebris(dt);
     }
 
     // Shadow camera follows player for better shadow quality nearby
@@ -620,6 +625,150 @@ class Game {
       else if (data.type === 'lore') {
         this.ui.addMessage(data.text, 'story');
         if (data.questTrigger) this.questManager.triggerEvent(data.questTrigger);
+      }
+    }
+  }
+
+  damageDestructiblesInRange(center, radius, damage) {
+    for (let i = this.destructibles.length - 1; i >= 0; i--) {
+      const d = this.destructibles[i];
+      const dx = d.mesh.position.x - center.x;
+      const dz = d.mesh.position.z - center.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist <= radius) {
+        d.hp -= damage;
+        // Flash the object
+        d.mesh.traverse(c => {
+          if (c.material) {
+            if (!c.userData._origColor) c.userData._origColor = c.material.color.getHex();
+            c.material.color.setHex(0xffaa44);
+          }
+        });
+        setTimeout(() => {
+          if (!d.destroyed) d.mesh.traverse(c => {
+            if (c.material && c.userData._origColor) c.material.color.setHex(c.userData._origColor);
+          });
+        }, 100);
+        if (d.hp <= 0) this.destroyObject(d, i);
+      }
+    }
+  }
+
+  damageDestructibleMelee(origin, direction, range, damage) {
+    const dir2d = direction.clone();
+    dir2d.y = 0;
+    dir2d.normalize();
+    for (let i = this.destructibles.length - 1; i >= 0; i--) {
+      const d = this.destructibles[i];
+      const dx = d.mesh.position.x - origin.x;
+      const dz = d.mesh.position.z - origin.z;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+      if (dist > range + 1) continue;
+      // Angle check
+      const len = Math.max(0.001, dist);
+      const dot = dir2d.x * (dx / len) + dir2d.z * (dz / len);
+      if (dot < 0.4) continue;
+      d.hp -= damage;
+      d.mesh.traverse(c => {
+        if (c.material) {
+          if (!c.userData._origColor) c.userData._origColor = c.material.color.getHex();
+          c.material.color.setHex(0xffaa44);
+        }
+      });
+      setTimeout(() => {
+        if (!d.destroyed) d.mesh.traverse(c => {
+          if (c.material && c.userData._origColor) c.material.color.setHex(c.userData._origColor);
+        });
+      }, 100);
+      if (d.hp <= 0) this.destroyObject(d, i);
+    }
+  }
+
+  destroyObject(d, idx) {
+    d.destroyed = true;
+    this.audioManager.playHit();
+    this.cameraShake = 0.3;
+
+    // Spawn debris particles
+    const pos = d.mesh.position;
+    const debrisCount = 6 + Math.floor(Math.random() * 6);
+    const debrisGroup = new THREE.Group();
+    debrisGroup.position.copy(pos);
+    const color = d.color || 0x8B7355;
+    for (let i = 0; i < debrisCount; i++) {
+      const size = 0.05 + Math.random() * 0.15;
+      const piece = new THREE.Mesh(
+        new THREE.BoxGeometry(size, size, size),
+        new THREE.MeshLambertMaterial({ color })
+      );
+      piece.position.set(
+        (Math.random() - 0.5) * 0.5,
+        Math.random() * 0.5,
+        (Math.random() - 0.5) * 0.5
+      );
+      piece.userData.vel = new THREE.Vector3(
+        (Math.random() - 0.5) * 6,
+        3 + Math.random() * 4,
+        (Math.random() - 0.5) * 6
+      );
+      piece.userData.rotVel = new THREE.Vector3(
+        (Math.random() - 0.5) * 10,
+        (Math.random() - 0.5) * 10,
+        (Math.random() - 0.5) * 10
+      );
+      debrisGroup.add(piece);
+    }
+    this.scene.add(debrisGroup);
+    this._debrisParticles.push({ group: debrisGroup, life: 2.0 });
+
+    // Drop items
+    if (d.drops) {
+      for (const drop of d.drops) {
+        if (Math.random() < (drop.chance || 0.5)) {
+          this.itemManager.spawnItem(drop.id, pos.clone().add(
+            new THREE.Vector3((Math.random() - 0.5) * 1.5, 0.5, (Math.random() - 0.5) * 1.5)
+          ));
+        }
+      }
+    }
+
+    // Remove the object
+    this.scene.remove(d.mesh);
+    // Remove from colliders if it had one
+    if (d.colliderIdx !== undefined && this.colliders[d.colliderIdx]) {
+      this.colliders.splice(d.colliderIdx, 1);
+      // Update remaining indices
+      for (const dd of this.destructibles) {
+        if (dd.colliderIdx !== undefined && dd.colliderIdx > d.colliderIdx) dd.colliderIdx--;
+      }
+    }
+    this.destructibles.splice(idx, 1);
+
+    this.ui.addMessage(`Destroyed ${d.name}!`, 'combat');
+  }
+
+  updateDebris(dt) {
+    for (let i = this._debrisParticles.length - 1; i >= 0; i--) {
+      const d = this._debrisParticles[i];
+      d.life -= dt;
+      if (d.life <= 0) {
+        this.scene.remove(d.group);
+        this._debrisParticles.splice(i, 1);
+        continue;
+      }
+      const fade = d.life / 2.0;
+      for (const piece of d.group.children) {
+        const v = piece.userData.vel;
+        piece.position.x += v.x * dt;
+        piece.position.y += v.y * dt;
+        piece.position.z += v.z * dt;
+        v.y -= 12 * dt; // gravity
+        const rv = piece.userData.rotVel;
+        piece.rotation.x += rv.x * dt;
+        piece.rotation.y += rv.y * dt;
+        piece.rotation.z += rv.z * dt;
+        if (piece.material) piece.material.opacity = fade;
+        if (piece.material && !piece.material.transparent) piece.material.transparent = true;
       }
     }
   }
