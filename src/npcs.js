@@ -155,7 +155,7 @@ const NPC_DEFS = {
   lena: {
     name: 'Lena',
     title: 'Resort Manager',
-    position: [-6, 0, -2],
+    position: [-8, 0, 6],
     color: 0xBB7766,
     hp: 50, damage: 8, attackRange: 2, attackSpeed: 1.8, zoneRadius: 18,
     combatStyle: 'scared', // fights only when cornered
