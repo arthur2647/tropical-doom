@@ -1204,10 +1204,25 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
       top: stepH
     });
   }
-  // Stair railings
+  // Stair railings (visual)
   for (const side of [-stairWidth / 2 - 0.05, stairWidth / 2 + 0.05]) {
     addCylinder(game, x + side, y + stiltH / 2 + 0.3, stairZ + stairDepth / 2, 0.03, 0.03, stairDepth, 0x5C4033, { collider: false });
   }
+  // Stair side wall colliders (prevent walking through from sides)
+  const halfW = stairWidth / 2;
+  game.colliders.push(new THREE.Box3(
+    new THREE.Vector3(x - halfW - 0.15, y, stairZ),
+    new THREE.Vector3(x - halfW, y + stiltH + 0.5, stairZ + stairDepth)
+  ));
+  game.colliders.push(new THREE.Box3(
+    new THREE.Vector3(x + halfW, y, stairZ),
+    new THREE.Vector3(x + halfW + 0.15, y + stiltH + 0.5, stairZ + stairDepth)
+  ));
+  // Back wall under stairs (prevent entering from under the hut)
+  game.colliders.push(new THREE.Box3(
+    new THREE.Vector3(x - halfW, y, stairZ - 0.15),
+    new THREE.Vector3(x + halfW, y + stiltH, stairZ + 0.15)
+  ));
 
   // Bed inside hut
   if (hasBed) {
