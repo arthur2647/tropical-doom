@@ -906,6 +906,23 @@ function buildResort(game) {
   // Sign pointing to village
   const signPost = addCylinder(game, 20, gY + 1, 10, 0.05, 0.06, 2, 0x6B4226);
   const signBoard = addBox(game, 20, gY + 2, 10, 1.5, 0.4, 0.08, 0xD4A556, { collider: false });
+
+  // Beach lounge chair for sleeping (near pool)
+  const loungeY = gY;
+  // Chair frame
+  addBox(game, 5, loungeY + 0.3, 10, 0.7, 0.08, 2.0, 0x6B4226, { collider: false });
+  // Raised back rest
+  addBox(game, 5, loungeY + 0.55, 10.8, 0.65, 0.4, 0.08, 0x6B4226, { collider: false });
+  // Cushion
+  const loungeCushion = addBox(game, 5, loungeY + 0.38, 10, 0.6, 0.06, 1.8, 0x7799AA, { collider: false });
+  // Small pillow
+  addBox(game, 5, loungeY + 0.45, 10.6, 0.4, 0.08, 0.3, 0xCCBBAA, { collider: false });
+  loungeCushion.userData = {
+    interactable: true,
+    type: 'bed',
+    promptText: 'Press E - Rest until morning'
+  };
+  game.interactables.push(loungeCushion);
 }
 
 // --- VILLAGE ---
@@ -1006,25 +1023,41 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
   flame.position.copy(torch.position);
   game.scene.add(flame);
 
-  // Bed inside hut
+  // Ladder at front of hut
+  const ladderX = x + 0.3;
+  const ladderZ = z + 1.75;
+  // Ladder rails
+  for (const side of [-0.2, 0.2]) {
+    addBox(game, ladderX + side, y + stiltH / 2, ladderZ, 0.05, stiltH + 0.3, 0.05, 0x5C4033, { collider: false });
+  }
+  // Ladder rungs
+  for (let r = 0; r < 4; r++) {
+    const ry = y + 0.3 + r * (stiltH / 4);
+    addBox(game, ladderX, ry, ladderZ, 0.4, 0.04, 0.06, 0x6B5030, { collider: false });
+  }
+
+  // Bed inside hut (visual)
   if (hasBed) {
     const stiltH = 1.5;
     // Bed frame
-    const bedFrame = addBox(game, x, y + stiltH + 0.25, z - 0.5, 1.2, 0.15, 2.2, 0x5C4033, { collider: false });
+    addBox(game, x, y + stiltH + 0.25, z - 0.5, 1.2, 0.15, 2.2, 0x5C4033, { collider: false });
     // Mattress
-    const mattress = addBox(game, x, y + stiltH + 0.38, z - 0.5, 1.1, 0.12, 2.0, 0x7799AA, { collider: false });
+    addBox(game, x, y + stiltH + 0.38, z - 0.5, 1.1, 0.12, 2.0, 0x7799AA, { collider: false });
     // Pillow
     addBox(game, x, y + stiltH + 0.48, z - 1.3, 0.6, 0.1, 0.35, 0xCCBBAA, { collider: false });
     // Blanket (slightly draped)
     addBox(game, x, y + stiltH + 0.45, z + 0.1, 1.0, 0.06, 1.2, 0x886644, { collider: false });
 
-    // Make bed interactable
-    mattress.userData = {
+    // Woven sleeping mat at base of ladder (interact to sleep)
+    const mat = addBox(game, x, y + 0.05, ladderZ + 1.0, 1.4, 0.06, 2.0, 0x8B7744, { collider: false });
+    // Small rolled pillow on the mat
+    addCylinder(game, x, y + 0.15, ladderZ + 1.8, 0.12, 0.12, 0.5, 0xCCBBAA, { collider: false });
+    mat.userData = {
       interactable: true,
       type: 'bed',
       promptText: 'Press E - Sleep until morning'
     };
-    game.interactables.push(mattress);
+    game.interactables.push(mat);
   }
 }
 
