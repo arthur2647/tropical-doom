@@ -124,7 +124,10 @@ const MATS = {};
 function getMat(color, roughness = 0.8) {
   const key = `${color}_${roughness}`;
   if (!MATS[key]) {
-    MATS[key] = new THREE.MeshStandardMaterial({ color, roughness, metalness: 0 });
+    MATS[key] = new THREE.MeshStandardMaterial({
+      color, roughness, metalness: 0,
+      polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
+    });
   }
   return MATS[key];
 }
@@ -132,7 +135,10 @@ function getMat(color, roughness = 0.8) {
 function getTexMat(color, tex, roughness = 0.85) {
   const key = `tex_${color}_${roughness}`;
   if (!MATS[key]) {
-    MATS[key] = new THREE.MeshStandardMaterial({ color, map: tex, roughness, metalness: 0 });
+    MATS[key] = new THREE.MeshStandardMaterial({
+      color, map: tex, roughness, metalness: 0,
+      polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
+    });
   }
   return MATS[key];
 }
@@ -152,7 +158,7 @@ export function createWorld(game) {
   game.sunLight = new THREE.DirectionalLight(0xfff0d0, 2.0);
   game.sunLight.position.set(50, 80, 50);
   game.sunLight.castShadow = true;
-  game.sunLight.shadow.mapSize.set(2048, 2048);
+  game.sunLight.shadow.mapSize.set(1024, 1024);
   game.sunLight.shadow.camera.left = -40;
   game.sunLight.shadow.camera.right = 40;
   game.sunLight.shadow.camera.top = 40;
@@ -437,11 +443,14 @@ function buildMinimap(game) {
   game.minimapStatic = mapCanvas;
 }
 
+let envFrameCount = 0;
+
 export function updateEnvironment(game, dt) {
   const t = game.totalTime;
+  envFrameCount++;
 
-  // --- Animated water waves ---
-  if (game.waterGeo) {
+  // --- Animated water waves (every 2nd frame) ---
+  if (game.waterGeo && (envFrameCount % 2 === 0)) {
     const verts = game.waterGeo.attributes.position;
     for (let i = 0; i < verts.count; i++) {
       const x = verts.getX(i);
@@ -493,23 +502,22 @@ export function updateEnvironment(game, dt) {
     }
   }
 
-  // --- Fireflies (visible at dusk/night) ---
+  // --- Fireflies (visible at dusk/night, update every 3rd frame) ---
   if (game.fireflies) {
     const ff = game.fireflies;
     const isNightish = game.isNight || (game.dayTime > 0.65 && game.dayTime < 0.85);
     ff.mesh.material.opacity = isNightish ? 0.6 + Math.sin(t * 2) * 0.2 : 0;
 
-    if (isNightish) {
+    if (isNightish && (envFrameCount % 3 === 0)) {
+      const scaledDt = dt * 3; // compensate for skipped frames
       const pos = ff.mesh.geometry.attributes.position;
       for (let i = 0; i < pos.count; i++) {
-        let x = pos.getX(i) + ff.vel[i * 3] * dt;
-        let y = pos.getY(i) + ff.vel[i * 3 + 1] * dt + Math.sin(t * 2 + i) * 0.005;
-        let z = pos.getZ(i) + ff.vel[i * 3 + 2] * dt;
-        // Clamp height
+        let x = pos.getX(i) + ff.vel[i * 3] * scaledDt;
+        let y = pos.getY(i) + ff.vel[i * 3 + 1] * scaledDt + Math.sin(t * 2 + i) * 0.005;
+        let z = pos.getZ(i) + ff.vel[i * 3 + 2] * scaledDt;
         if (y < 0.5) { y = 0.5; ff.vel[i * 3 + 1] = Math.abs(ff.vel[i * 3 + 1]); }
         if (y > 5) { y = 5; ff.vel[i * 3 + 1] = -Math.abs(ff.vel[i * 3 + 1]); }
-        // Random direction changes
-        if (Math.random() < 0.005) {
+        if (Math.random() < 0.015) {
           ff.vel[i * 3] = (Math.random() - 0.5) * 0.6;
           ff.vel[i * 3 + 1] = (Math.random() - 0.5) * 0.3;
           ff.vel[i * 3 + 2] = (Math.random() - 0.5) * 0.6;
@@ -563,18 +571,17 @@ export function updateEnvironment(game, dt) {
     }
   }
 
-  // --- Falling leaves ---
-  if (game.fallingLeaves) {
+  // --- Falling leaves (every 2nd frame) ---
+  if (game.fallingLeaves && (envFrameCount % 2 === 0)) {
     const fl = game.fallingLeaves;
+    const scaledDt = dt * 2;
     const pos = fl.mesh.geometry.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      let x = pos.getX(i) + fl.vel[i * 3] * dt;
-      let y = pos.getY(i) + fl.vel[i * 3 + 1] * dt;
-      let z = pos.getZ(i) + fl.vel[i * 3 + 2] * dt;
-      // Gentle spiral drift
+      let x = pos.getX(i) + fl.vel[i * 3] * scaledDt;
+      let y = pos.getY(i) + fl.vel[i * 3 + 1] * scaledDt;
+      let z = pos.getZ(i) + fl.vel[i * 3 + 2] * scaledDt;
       x += Math.sin(t * 1.5 + i * 0.7) * 0.015;
       z += Math.cos(t * 1.2 + i * 1.1) * 0.015;
-      // Reset when hitting ground
       const gy = getTerrainHeightFast(x, z);
       if (y < gy + 0.2) {
         x = -50 + (Math.random() - 0.5) * 60;
@@ -618,8 +625,8 @@ export function updateEnvironment(game, dt) {
     }
   }
 
-  // --- Shore splash ---
-  if (game.shoreSplash) {
+  // --- Shore splash (every 3rd frame) ---
+  if (game.shoreSplash && (envFrameCount % 3 === 0)) {
     const pos = game.shoreSplash.geometry.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const baseAngle = (i / pos.count) * Math.PI * 2;
@@ -850,8 +857,8 @@ function buildResort(game) {
 
   // Main building
   addBox(game, -8, gY + 2, -5, 16, 4, 10, 0xD4C5A9);
-  addBox(game, -15, gY + 2, 0, 2, 4, 12, 0xCCBB99);
-  addBox(game, -1, gY + 2, 0, 2, 4, 12, 0xCCBB99);
+  addBox(game, -15, gY + 2, 5.1, 2, 4, 12, 0xCCBB99);
+  addBox(game, -1, gY + 2, 5.1, 2, 4, 12, 0xCCBB99);
   addBox(game, -8, gY + 4.2, 0, 16, 0.4, 14, 0x8B7355);
   // Columns
   addCylinder(game, -12, gY + 1.5, 5, 0.3, 0.4, 3, 0xCCCCBB);
@@ -970,7 +977,7 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
     addCylinder(game, x + dx, y + stiltH / 2, z + dz, 0.08, 0.1, stiltH, 0x5C4033);
   }
   addBox(game, x, y + stiltH, z, 3.5, 0.15, 3.5, 0x8B7355);
-  addBox(game, x, y + stiltH + 1.2, z - 1.7, 3.5, 2.2, 0.15, 0x9B8B60);
+  addBox(game, x, y + stiltH + 1.2, z - 1.7, 3.2, 2.2, 0.15, 0x9B8B60);
   addBox(game, x - 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60);
   addBox(game, x + 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60);
   const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 2, 4), getMat(0x8B7B45));
