@@ -3,7 +3,7 @@ import { getTerrainHeightFast } from './world.js';
 
 const NPC_DEFS = {
   maria: {
-    name: 'Maria',
+    name: 'Anna',
     title: 'Village Leader',
     position: [62, 0, 18],
     color: 0xCC6644,
@@ -20,9 +20,9 @@ const NPC_DEFS = {
     },
     dialogues: {
       initial: {
-        speaker: 'Maria - Village Leader',
+        speaker: 'Anna - Village Leader',
         lines: [
-          'Salamat sa Diyos, another survivor! I\'m Maria. We\'ve gathered what\'s left of the village here.',
+          'Salamat sa Diyos, another survivor! I\'m Anna. We\'ve gathered what\'s left of the village here.',
           'Three days ago the earth shook and that old temple in the jungle cracked open. Then the creatures came.',
           'We lose people every night. The Aswang... they come when it\'s dark. We need help defending this place.',
           'Can you fight? We need every able body. Talk to old Tomas for medicine, and Pedro knows the coast.'
@@ -32,7 +32,7 @@ const NPC_DEFS = {
         next: 'defense'
       },
       defense: {
-        speaker: 'Maria - Village Leader',
+        speaker: 'Anna - Village Leader',
         lines: [
           'Thank you for staying. Every night they attack in greater numbers.',
           'There\'s something wrong with the old temple. The elders used to say a powerful Diwata was sealed there.',
@@ -41,7 +41,7 @@ const NPC_DEFS = {
         checkCondition: { event: 'survive_dawn', required: 1, nextIfMet: 'post_defense' },
       },
       post_defense: {
-        speaker: 'Maria - Village Leader',
+        speaker: 'Anna - Village Leader',
         lines: [
           'You fought bravely. The old stories say three sacred relics were used to seal the Diwata centuries ago.',
           'If the seal is broken, maybe we can restore it. But you\'d need to find all three relics.',
@@ -51,7 +51,7 @@ const NPC_DEFS = {
         next: 'waiting'
       },
       waiting: {
-        speaker: 'Maria - Village Leader',
+        speaker: 'Anna - Village Leader',
         lines: [
           'Have you found the relics? The attacks are getting worse. Please hurry.',
           'Stay safe out there. The jungle is most dangerous at night.'
@@ -204,7 +204,7 @@ function createNPCModel(def) {
   const skin = 0xC8956C; // Filipino skin tone
 
   if (def === NPC_DEFS.maria) {
-    // Maria - Strong village leader, bolo fighter, practical clothing
+    // Anna - Strong village leader, bolo fighter, practical clothing
     // Torso - red/brown blouse, slightly broad-shouldered
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.22), mL(0xCC4433));
     torso.position.y = 0.95; torso.castShadow = true;
@@ -894,10 +894,9 @@ export class NPCManager {
         this.game.questManager.triggerEvent(dialogue.onComplete);
       }
 
-      // Give weapon
+      // Give weapon (addWeapon already triggers 'pickup_weapon')
       if (dialogue.giveWeapon) {
         this.game.player.addWeapon({ ...dialogue.giveWeapon });
-        this.game.questManager.triggerEvent('pickup_weapon');
       }
 
       // Unlock quests

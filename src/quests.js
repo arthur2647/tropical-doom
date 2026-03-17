@@ -34,7 +34,7 @@ export class QuestManager {
       objectives: [
         { text: 'Read the note at the resort', event: 'found_note', required: 1 },
         { text: 'Reach the Village', event: 'enter_the_village', required: 1 },
-        { text: 'Talk to Maria', event: 'talk_maria', required: 1 },
+        { text: 'Talk to Anna', event: 'talk_maria', required: 1 },
       ],
       rewards: { xp: 100, gold: 30, item: 'bolo' },
       nextQuest: 'village_defense',
@@ -44,7 +44,7 @@ export class QuestManager {
       title: 'Hold the Line',
       type: 'MAIN QUEST',
       act: 1,
-      desc: 'Maria says the village is attacked every night. Help defend it.',
+      desc: 'Anna says the village is attacked every night. Help defend it.',
       objectives: [
         { text: 'Kill 10 enemies near the village', event: 'kill_village_enemy', required: 10 },
         { text: 'Survive until dawn', event: 'survive_dawn', required: 1 },
@@ -58,7 +58,7 @@ export class QuestManager {
       title: 'The Ancient Curse',
       type: 'MAIN QUEST',
       act: 2,
-      desc: 'Maria tells you the creatures came from the old temple. Investigate.',
+      desc: 'Anna tells you the creatures came from the old temple. Investigate.',
       objectives: [
         { text: 'Find the Temple Ruins', event: 'enter_the_temple_ruins', required: 1 },
         { text: 'Read the temple inscription', event: 'read_inscription', required: 1 },

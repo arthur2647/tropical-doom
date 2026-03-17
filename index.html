@@ -191,6 +191,19 @@ canvas{display:block}
 
 #touch-look-zone{position:absolute;top:0;right:0;width:55%;height:70%;pointer-events:auto;touch-action:none}
 
+/* Tutorial */
+#tutorial-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,0.75);display:none;
+  align-items:center;justify-content:center;pointer-events:auto}
+#tutorial-box{max-width:500px;width:90%;background:rgba(15,10,5,0.97);border:1px solid rgba(255,136,0,0.4);
+  border-radius:8px;padding:28px 32px;text-align:center;position:relative}
+#tutorial-title{color:#ff8833;font-size:13px;letter-spacing:3px;text-transform:uppercase;margin-bottom:12px}
+#tutorial-text{color:#ccbb99;font-size:15px;line-height:1.8;margin-bottom:8px}
+#tutorial-hint{color:#887766;font-size:12px;font-style:italic;margin-bottom:18px}
+#tutorial-dismiss{color:#665544;font-size:11px;letter-spacing:1px}
+#tutorial-step{display:flex;justify-content:center;gap:6px;margin-top:14px}
+#tutorial-step .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,136,0,0.2);border:1px solid rgba(255,136,0,0.3)}
+#tutorial-step .dot.active{background:rgba(255,136,0,0.7)}
+
 /* Mobile-specific adjustments */
 @media (max-width:768px){
   .title-main{font-size:42px!important}
@@ -327,6 +340,16 @@ canvas{display:block}
   <h2>PAUSED</h2>
   <div class="pause-btn" id="pause-resume">RESUME</div>
   <div class="pause-btn" id="pause-restart">RESTART</div>
+</div>
+
+<div id="tutorial-overlay">
+  <div id="tutorial-box">
+    <div id="tutorial-title">TUTORIAL</div>
+    <div id="tutorial-text"></div>
+    <div id="tutorial-hint"></div>
+    <div id="tutorial-step"></div>
+    <div id="tutorial-dismiss">Click or press any key to continue</div>
+  </div>
 </div>
 
 <script type="module" src="/src/main.js"></script>

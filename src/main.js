@@ -111,6 +111,14 @@ class Game {
 
     this.interactables = [];
 
+    // Tutorial system
+    this.tutorial = {
+      shown: {},
+      queue: [],
+      active: false,
+      steps: this.getTutorialSteps(),
+    };
+
     this.setupEvents();
     this.animate = this.animate.bind(this);
   }
@@ -273,15 +281,20 @@ class Game {
 
     this.state = GameState.PLAYING;
     // Brief spawn invincibility so player can orient
-    this.player.invincible = 5;
+    this.player.invincible = 8;
 
     this.ui.showHUD(true);
-    this.ui.addMessage(`You wake up near ${this.spawnName}. Something terrible has happened...`, 'story');
-    this.ui.addMessage('WASD to move, Mouse to look around, Left Click to attack', 'system');
 
-    setTimeout(() => this.ui.addMessage('Look for Lena at the resort (green dot on minimap, top-right).', 'system'), 4000);
-    setTimeout(() => this.ui.addMessage('Press TAB for inventory, J for quests, C for crafting', 'system'), 8000);
-    setTimeout(() => this.ui.addMessage('Pick up glowing items with E. Red dots on minimap = enemies.', 'system'), 12000);
+    // Show tutorial for new players
+    await new Promise(resolve => {
+      this.showTutorial();
+      const checkDone = setInterval(() => {
+        if (!this.tutorial.active) { clearInterval(checkDone); resolve(); }
+      }, 100);
+    });
+
+    this.ui.addMessage(`You wake up near ${this.spawnName}. Something terrible has happened...`, 'story');
+    setTimeout(() => this.ui.addMessage('Look for Lena at the resort (green dot on minimap).', 'system'), 3000);
 
     this.questManager.activateQuest('wake_up');
 
@@ -332,6 +345,113 @@ class Game {
       overlay.addEventListener('click', onActivate);
       overlay.addEventListener('touchstart', onActivate, { passive: false });
     });
+  }
+
+  // --- Tutorial System ---
+  getTutorialSteps() {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const k = (desktop, mobile) => isMobile ? mobile : desktop;
+    return [
+      {
+        id: 'welcome',
+        title: 'WELCOME TO PARADISE GONE DARK',
+        text: 'You\'re stranded on a cursed tropical island. Survive by exploring, fighting creatures, crafting weapons, and uncovering the mystery of the ancient temple.',
+        hint: 'This tutorial will guide you through the basics.',
+      },
+      {
+        id: 'movement',
+        title: 'MOVEMENT',
+        text: k(
+          '<b>WASD</b> — Move around<br><b>SHIFT</b> — Sprint (uses stamina)<br><b>SPACE</b> — Jump<br><b>Mouse</b> — Look around',
+          '<b>Left stick</b> — Move (push fully to sprint)<br><b>Swipe right side</b> — Look around'
+        ),
+        hint: 'Watch your stamina bar — sprinting drains it. When exhausted, you move slower.',
+      },
+      {
+        id: 'combat',
+        title: 'COMBAT',
+        text: k(
+          '<b>Left Click</b> — Attack<br><b>Right Click</b> — Heavy Attack (more damage, more stamina)<br>Weapons have durability — they break with use!',
+          '<b>ATK</b> — Attack<br><b>HVY</b> — Heavy Attack (more damage, more stamina)<br>Weapons have durability — they break with use!'
+        ),
+        hint: 'Red dots on the minimap (top-right) are enemies. Avoid getting surrounded!',
+      },
+      {
+        id: 'interact',
+        title: 'ITEMS & INTERACTION',
+        text: k(
+          '<b>E</b> — Pick up items and talk to NPCs<br>Glowing objects on the ground are collectible items.<br>Green dots on the minimap are friendly NPCs.',
+          '<b>USE</b> button — Pick up items and talk to NPCs<br>Glowing objects on the ground are collectible items.<br>Green dots on the minimap are friendly NPCs.'
+        ),
+        hint: 'Find Lena at the resort first — she\'ll give you a weapon upgrade.',
+      },
+      {
+        id: 'inventory',
+        title: 'INVENTORY & CRAFTING',
+        text: k(
+          '<b>TAB</b> — Inventory (use consumables, switch weapons)<br><b>C</b> — Crafting (combine materials at workbenches)<br><b>J</b> — Quest Log (track your objectives)',
+          '<b>ITEMS</b> — Inventory<br><b>CRAFT</b> — Crafting (combine materials at workbenches)<br><b>QUESTS</b> — Quest Log'
+        ),
+        hint: 'Collect materials like scrap metal, cloth rags, and herbs to craft better weapons and healing items.',
+      },
+      {
+        id: 'progression',
+        title: 'HOW TO PROGRESS',
+        text: '1. <b>Find Lena</b> at the resort for your first weapon<br>2. <b>Go to the Village</b> (east) and talk to Anna<br>3. <b>Complete quests</b> from NPCs to unlock the story<br>4. <b>Find the 3 sacred relics</b> scattered across the island<br>5. <b>Return to the Temple</b> to face the final boss',
+        hint: 'Follow quest objectives in the top-left corner. Sleep in the village bed to heal and skip to morning.',
+      },
+      {
+        id: 'tips',
+        title: 'SURVIVAL TIPS',
+        text: 'Night is dangerous — enemies are stronger and more numerous.<br>NPCs fight alongside you and can be healed by sleeping.<br>Craft a <b>Molotov Cocktail</b> for area damage against groups.<br>The <b>workbench</b> at the resort and village lets you craft weapons.',
+        hint: 'Good luck, survivor. The island\'s fate is in your hands.',
+      },
+    ];
+  }
+
+  showTutorial() {
+    const overlay = document.getElementById('tutorial-overlay');
+    const steps = this.tutorial.steps;
+    let stepIdx = 0;
+
+    const showStep = () => {
+      const step = steps[stepIdx];
+      document.getElementById('tutorial-title').textContent = step.title;
+      document.getElementById('tutorial-text').innerHTML = step.text;
+      document.getElementById('tutorial-hint').textContent = step.hint || '';
+      // Step dots
+      const dotsEl = document.getElementById('tutorial-step');
+      dotsEl.innerHTML = steps.map((_, i) =>
+        `<div class="dot${i === stepIdx ? ' active' : ''}"></div>`
+      ).join('');
+      document.getElementById('tutorial-dismiss').textContent =
+        stepIdx < steps.length - 1 ? 'Click or press any key to continue' : 'Click or press any key to start playing';
+    };
+
+    const advance = (e) => {
+      if (e) e.preventDefault();
+      stepIdx++;
+      if (stepIdx >= steps.length) {
+        // Tutorial done
+        overlay.style.display = 'none';
+        this.tutorial.active = false;
+        overlay.removeEventListener('click', advance);
+        window.removeEventListener('keydown', advance);
+        overlay.removeEventListener('touchstart', advance);
+        // Lock controls after tutorial
+        if (!this.touch.enabled) this.controls.lock();
+        return;
+      }
+      showStep();
+    };
+
+    this.tutorial.active = true;
+    overlay.style.display = 'flex';
+    showStep();
+
+    overlay.addEventListener('click', advance);
+    overlay.addEventListener('touchstart', advance, { passive: false });
+    window.addEventListener('keydown', advance);
   }
 
   animate() {
