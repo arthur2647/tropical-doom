@@ -309,8 +309,8 @@ export function createWorld(game) {
   }
   terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-  const terrain = new THREE.Mesh(terrainGeo, new THREE.MeshStandardMaterial({
-    vertexColors: true, roughness: 0.85, metalness: 0,
+  const terrain = new THREE.Mesh(terrainGeo, new THREE.MeshLambertMaterial({
+    vertexColors: true,
     flatShading: false,
   }));
   terrain.receiveShadow = true;
