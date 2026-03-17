@@ -26,6 +26,14 @@ export class Player {
     this.onGround = true;
     this.vertVelocity = 0;
 
+    // Pre-allocated vectors for per-frame movement (avoid GC pressure)
+    this._forward = new THREE.Vector3();
+    this._right = new THREE.Vector3();
+    this._up = new THREE.Vector3(0, 1, 0);
+    this._move = new THREE.Vector3();
+    this._newPos = new THREE.Vector3();
+    this._slidePos = new THREE.Vector3();
+
     // Combat
     this.attackCooldown = 0;
     this.invincible = 0;
@@ -332,26 +340,27 @@ export class Player {
     if (keys['KeyD']) this.direction.x += 1;
     this.direction.normalize();
 
-    // Apply movement in camera direction
-    const forward = new THREE.Vector3();
-    cam.getWorldDirection(forward);
-    forward.y = 0; forward.normalize();
-    const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0));
+    // Apply movement in camera direction (reuse pre-allocated vectors)
+    cam.getWorldDirection(this._forward);
+    this._forward.y = 0; this._forward.normalize();
+    this._right.crossVectors(this._forward, this._up);
 
-    const move = new THREE.Vector3();
-    move.addScaledVector(forward, -this.direction.z * moveSpeed * dt);
-    move.addScaledVector(right, this.direction.x * moveSpeed * dt);
+    this._move.set(0, 0, 0);
+    this._move.addScaledVector(this._forward, -this.direction.z * moveSpeed * dt);
+    this._move.addScaledVector(this._right, this.direction.x * moveSpeed * dt);
 
     // Collision check
-    const newPos = cam.position.clone().add(move);
-    if (this.checkCollision(newPos)) {
+    this._newPos.copy(cam.position).add(this._move);
+    if (this.checkCollision(this._newPos)) {
       // Try sliding along walls
-      const slideX = cam.position.clone().add(new THREE.Vector3(move.x, 0, 0));
-      const slideZ = cam.position.clone().add(new THREE.Vector3(0, 0, move.z));
-      if (!this.checkCollision(slideX)) cam.position.copy(slideX);
-      else if (!this.checkCollision(slideZ)) cam.position.copy(slideZ);
+      this._slidePos.set(cam.position.x + this._move.x, cam.position.y, cam.position.z);
+      if (!this.checkCollision(this._slidePos)) cam.position.copy(this._slidePos);
+      else {
+        this._slidePos.set(cam.position.x, cam.position.y, cam.position.z + this._move.z);
+        if (!this.checkCollision(this._slidePos)) cam.position.copy(this._slidePos);
+      }
     } else {
-      cam.position.copy(newPos);
+      cam.position.copy(this._newPos);
     }
 
     // Gravity & ground

@@ -21,6 +21,14 @@ export class AudioManager {
       this.compressor.ratio.value = 4;
       this.compressor.connect(this.masterGain);
 
+      // Pre-generate noise buffers to avoid per-sound allocations
+      this._noiseCache = {};
+      for (const type of ['white', 'pink', 'brown']) {
+        for (const dur of [0.03, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 1.0, 1.5]) {
+          this._noiseCache[`${type}_${dur}`] = this._generateNoiseBuffer(dur, type);
+        }
+      }
+
       this.initialized = true;
       this.startAmbientLoop();
     } catch (e) {
@@ -30,8 +38,8 @@ export class AudioManager {
 
   // --- Core synthesis helpers ---
 
-  // Create a noise buffer (white/pink/brown)
-  createNoiseBuffer(duration, type = 'white') {
+  // Generate a noise buffer (white/pink/brown) — internal, called once at init
+  _generateNoiseBuffer(duration, type = 'white') {
     const len = this.ctx.sampleRate * duration;
     const buffer = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
     const data = buffer.getChannelData(0);
@@ -54,6 +62,25 @@ export class AudioManager {
       }
     }
     return buffer;
+  }
+
+  // Get a cached noise buffer (reuses pre-generated buffers, no per-call allocation)
+  createNoiseBuffer(duration, type = 'white') {
+    const key = `${type}_${duration}`;
+    if (this._noiseCache && this._noiseCache[key]) return this._noiseCache[key];
+    // Fallback for uncached durations — find nearest cached
+    if (this._noiseCache) {
+      const prefix = `${type}_`;
+      let best = null, bestDiff = Infinity;
+      for (const k in this._noiseCache) {
+        if (k.startsWith(prefix)) {
+          const d = Math.abs(parseFloat(k.slice(prefix.length)) - duration);
+          if (d < bestDiff) { bestDiff = d; best = k; }
+        }
+      }
+      if (best) return this._noiseCache[best];
+    }
+    return this._generateNoiseBuffer(duration, type);
   }
 
   // Play filtered noise burst

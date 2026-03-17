@@ -96,6 +96,19 @@ class Game {
     // Raycaster for interactions
     this.interactRay = new THREE.Raycaster();
     this.interactRay.far = 4;
+    this._rayCenter = new THREE.Vector2(0, 0);
+
+    // Pre-allocated colors for day/night cycle (avoid per-frame allocations)
+    this._skyColors = {
+      day: new THREE.Color(0.4, 0.7, 1.0),
+      sunset: new THREE.Color(1.0, 0.4, 0.15),
+      dawn: new THREE.Color(0.9, 0.55, 0.35),
+      twilight: new THREE.Color(0.15, 0.1, 0.3),
+      night: new THREE.Color(0.02, 0.02, 0.06),
+      dayAmb: new THREE.Color(1, 0.95, 0.8),
+      nightAmb: new THREE.Color(0.2, 0.2, 0.5),
+      scratch: new THREE.Color(),
+    };
 
     // Systems
     this.player = new Player(this);
@@ -513,30 +526,22 @@ class Game {
       this.sunLight.intensity = Math.max(0, sunY) * 2.5;
     }
 
-    // Sky color with richer sunrise/sunset transitions
-    const dayCol = new THREE.Color(0.4, 0.7, 1.0);
-    const sunsetCol = new THREE.Color(1.0, 0.4, 0.15);
-    const dawnCol = new THREE.Color(0.9, 0.55, 0.35);
-    const twilightCol = new THREE.Color(0.15, 0.1, 0.3);
-    const nightCol = new THREE.Color(0.02, 0.02, 0.06);
-
-    let skyColor;
+    // Sky color with richer sunrise/sunset transitions (using pre-allocated colors)
+    const sc = this._skyColors;
+    const skyColor = sc.scratch;
     if (sunY > 0.3) {
-      skyColor = dayCol;
+      skyColor.copy(sc.day);
     } else if (sunY > 0.1) {
-      // Late afternoon / early morning - blend day to warm
       const t = (sunY - 0.1) / 0.2;
-      skyColor = dawnCol.clone().lerp(dayCol, t);
+      skyColor.copy(sc.dawn).lerp(sc.day, t);
     } else if (sunY > -0.05) {
-      // Sunset/sunrise band - warmest colors
       const t = (sunY + 0.05) / 0.15;
-      skyColor = twilightCol.clone().lerp(sunsetCol, t);
+      skyColor.copy(sc.twilight).lerp(sc.sunset, t);
     } else if (sunY > -0.2) {
-      // Twilight - purple/dark blue
       const t = (sunY + 0.2) / 0.15;
-      skyColor = nightCol.clone().lerp(twilightCol, t);
+      skyColor.copy(sc.night).lerp(sc.twilight, t);
     } else {
-      skyColor = nightCol;
+      skyColor.copy(sc.night);
     }
     this.scene.background = skyColor;
     this.scene.fog.color.copy(skyColor);
@@ -553,9 +558,7 @@ class Game {
     if (this.ambientLight) {
       const nightAmt = this.isNight ? 1 : Math.max(0, 1 - sunY * 5);
       this.ambientLight.intensity = THREE.MathUtils.lerp(0.6, 0.15, nightAmt);
-      const dayAmb = new THREE.Color(1, 0.95, 0.8);
-      const nightAmb = new THREE.Color(0.2, 0.2, 0.5);
-      this.ambientLight.color.copy(dayAmb.lerp(nightAmb, nightAmt));
+      this.ambientLight.color.copy(sc.dayAmb).lerp(sc.nightAmb, nightAmt);
     }
 
     this.renderer.toneMappingExposure = this.isNight ? 0.5 : 1.2;
@@ -576,7 +579,7 @@ class Game {
   }
 
   checkInteractables() {
-    this.interactRay.setFromCamera(new THREE.Vector2(0, 0), this.camera);
+    this.interactRay.setFromCamera(this._rayCenter, this.camera);
     const hits = this.interactRay.intersectObjects(this.interactables, true);
     const prompt = document.getElementById('interact-prompt');
     if (hits.length > 0) {

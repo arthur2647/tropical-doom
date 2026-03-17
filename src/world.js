@@ -559,15 +559,18 @@ export function updateEnvironment(game, dt) {
 
   // --- Clouds drift ---
   if (game.clouds) {
+    // Update cloud material only when night state changes (they share material)
+    if (game._lastCloudNight !== game.isNight && game.clouds.length > 0) {
+      game._lastCloudNight = game.isNight;
+      const mat = game.clouds[0].children[0]?.material;
+      if (mat) {
+        mat.opacity = game.isNight ? 0.2 : 0.5;
+        mat.color.setScalar(game.isNight ? 0.15 : 1.0);
+      }
+    }
     for (const cloud of game.clouds) {
       cloud.position.x += cloud.userData.speed * dt;
       if (cloud.position.x > 200) cloud.position.x = -200;
-      // Darken clouds at night
-      const brightness = game.isNight ? 0.15 : 1.0;
-      cloud.children.forEach(c => {
-        c.material.opacity = (game.isNight ? 0.2 : 0.5);
-        c.material.color.setScalar(brightness);
-      });
     }
   }
 
@@ -651,8 +654,9 @@ export function updateMinimap(game) {
   const px = (pos.x / 300 + 0.5) * size;
   const py = (pos.z / 300 + 0.5) * size;
 
-  // Player direction
-  const dir = new THREE.Vector3();
+  // Player direction (reuse cached vector)
+  if (!game._minimapDir) game._minimapDir = new THREE.Vector3();
+  const dir = game._minimapDir;
   game.camera.getWorldDirection(dir);
   const angle = Math.atan2(dir.x, dir.z);
 
