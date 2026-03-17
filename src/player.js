@@ -93,7 +93,7 @@ export class Player {
   }
 
   getItemCategory(id) {
-    const consumables = ['coconut', 'buko_juice', 'adobo', 'herbs', 'bandage', 'energy_drink', 'antidote'];
+    const consumables = ['coconut', 'buko_juice', 'adobo', 'herbs', 'bandage', 'energy_drink', 'antidote', 'molotov'];
     return consumables.includes(id) ? 'consumable' : 'material';
   }
 

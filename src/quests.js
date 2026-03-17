@@ -261,7 +261,7 @@ export class QuestManager {
 
   showVictoryScreen() {
     this.game.state = 8; // DEAD state to stop updates
-    this.game.controls.unlock();
+    if (!this.game.touch.enabled) this.game.controls.unlock();
     const mins = Math.floor(this.game.totalTime / 60);
     const secs = Math.floor(this.game.totalTime % 60);
     const overlay = document.createElement('div');

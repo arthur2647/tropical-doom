@@ -522,7 +522,7 @@ class Game {
     }
 
     this.state = GameState.PAUSED; // Prevent updates during sleep
-    this.controls.unlock();
+    if (!this.touch.enabled) this.controls.unlock();
 
     // Create sleep overlay
     const overlay = document.createElement('div');

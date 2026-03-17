@@ -862,7 +862,7 @@ export class NPCManager {
     this.currentDialogue = { npc, npcId, dialogue };
     this.dialogueIndex = 0;
     this.game.state = 7; // DIALOGUE
-    this.game.controls.unlock();
+    if (!this.game.touch.enabled) this.game.controls.unlock();
     this.showDialogueLine();
   }
 
