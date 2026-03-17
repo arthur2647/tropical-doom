@@ -127,7 +127,7 @@ const NPC_DEFS = {
   pedro: {
     name: 'Pedro',
     title: 'Fisherman',
-    position: [88, 0, -63],
+    position: [95, 0, -75],
     color: 0x6688AA,
     hp: 80, damage: 18, attackRange: 2, attackSpeed: 1.2, zoneRadius: 22,
     combatStyle: 'melee', // tough fighter with improvised weapons

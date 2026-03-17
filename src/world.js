@@ -673,14 +673,16 @@ export function updateEnvironment(game, dt) {
   // --- Moon ---
   if (game.moon) {
     const moonAngle = game.dayTime * Math.PI * 2 + Math.PI / 2; // opposite of sun
+    const moonY = Math.sin(moonAngle) * 250;
     game.moon.position.set(
       game.camera.position.x + Math.cos(moonAngle) * 300,
-      Math.max(20, Math.sin(moonAngle) * 250),
+      moonY,
       game.camera.position.z - 120
     );
-    const moonVisible = game.isNight || game.dayTime > 0.7 || game.dayTime < 0.15;
-    const moonOpacity = moonVisible ? 0.95 : 0;
-    game.moonMat.opacity = moonOpacity;
+    // Only visible when above horizon AND during night/twilight
+    const aboveHorizon = moonY > 10;
+    const moonVisible = aboveHorizon && (game.isNight || game.dayTime > 0.7 || game.dayTime < 0.15);
+    game.moonMat.opacity = moonVisible ? 0.95 : 0;
     game.moonGlowMat.opacity = moonVisible ? 0.12 : 0;
   }
 
@@ -1218,10 +1220,11 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
     new THREE.Vector3(x + halfW, y, stairZ),
     new THREE.Vector3(x + halfW + 0.15, y + stiltH + 0.5, stairZ + stairDepth)
   ));
-  // Back wall under stairs (prevent entering from under the hut)
+  // Front wall under hut floor (prevent entering from under the hut)
+  // Covers full hut width, not just stair width, to block gaps on either side of stairs
   game.colliders.push(new THREE.Box3(
-    new THREE.Vector3(x - halfW, y, stairZ - 0.15),
-    new THREE.Vector3(x + halfW, y + stiltH, stairZ + 0.15)
+    new THREE.Vector3(x - 1.75, y, stairZ - 0.15),
+    new THREE.Vector3(x + 1.75, y + stiltH, stairZ + 0.15)
   ));
 
   // Bed inside hut
