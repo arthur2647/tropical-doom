@@ -202,8 +202,20 @@ class Game {
     this.weather.init();
     this.audioManager.init();
 
-    // Position player on the beach near the resort - clear of all colliders
-    this.camera.position.set(5, 1.7, 12);
+    // Random spawn point from safe locations around the island
+    const spawnPoints = [
+      { x: 5, z: 12, name: 'the resort beach' },
+      { x: 50, z: 10, name: 'the village outskirts' },
+      { x: 65, z: -40, name: 'the fisherman\'s cove' },
+      { x: -10, z: -30, name: 'sunset beach' },
+      { x: 20, z: 50, name: 'a jungle clearing' },
+      { x: -30, z: 0, name: 'a cliff overlook' },
+      { x: 30, z: -20, name: 'the coastal path' },
+    ];
+    const spawn = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+    this.spawnName = spawn.name;
+    const spawnY = 1.7;
+    this.camera.position.set(spawn.x, spawnY, spawn.z);
     loadBar.style.width = '100%';
     await this.sleep(300);
 
@@ -217,7 +229,7 @@ class Game {
     this.player.invincible = 5;
 
     this.ui.showHUD(true);
-    this.ui.addMessage('You wake up on the beach. The resort is in ruins...', 'story');
+    this.ui.addMessage(`You wake up near ${this.spawnName}. Something terrible has happened...`, 'story');
     this.ui.addMessage('WASD to move, Mouse to look around, Left Click to attack', 'system');
 
     setTimeout(() => this.ui.addMessage('Look for Lena at the resort (green dot on minimap, top-right).', 'system'), 4000);
