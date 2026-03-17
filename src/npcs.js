@@ -10,6 +10,15 @@ const NPC_DEFS = {
     // Combat stats
     hp: 120, damage: 14, attackRange: 2.5, attackSpeed: 1.4, zoneRadius: 25,
     combatStyle: 'melee', // bolo fighter
+    ambientChatter: [
+      'We need to reinforce the barricades before nightfall...',
+      '*checks the perimeter* All clear for now.',
+      'I used to teach school before all this happened.',
+      'If we can survive long enough, maybe help will come.',
+      'The children are hiding in the eastern hut. They\'re scared.',
+      '*sharpens her bolo* These things won\'t take us without a fight.',
+    ],
+    idleActivity: 'patrol', // patrol, gather, craft
     callouts: {
       enemySpotted: ['Enemies approaching! Everyone, fight!', 'To arms! Protect the village!', 'They\'re coming! Stand your ground!'],
       attacking: ['Hiya!', 'Get back, demon!', 'You won\'t take this village!'],
@@ -66,6 +75,15 @@ const NPC_DEFS = {
     color: 0x888866,
     hp: 60, damage: 5, attackRange: 2, attackSpeed: 2.0, zoneRadius: 20,
     combatStyle: 'healer', // heals player when nearby during combat
+    ambientChatter: [
+      '*sorts through herbs* These should help with the fever...',
+      'In my years as an albularyo, I\'ve never seen sickness like this.',
+      '*grinds herbs in a mortar* The old remedies still work best.',
+      'I taught Anna\'s mother how to use medicinal plants, you know.',
+      'If you find wild herbs in the jungle, bring them to me.',
+      '*examines a poultice* This should keep infection away.',
+    ],
+    idleActivity: 'gather',
     callouts: {
       enemySpotted: ['Creatures! Stay close, I\'ll tend your wounds!', 'They\'re here again... be careful!'],
       attacking: ['Back! Get back!', 'Leave us alone!'],
@@ -113,6 +131,15 @@ const NPC_DEFS = {
     color: 0x6688AA,
     hp: 80, damage: 18, attackRange: 2, attackSpeed: 1.2, zoneRadius: 22,
     combatStyle: 'melee', // tough fighter with improvised weapons
+    ambientChatter: [
+      '*mends a fishing net* Force of habit, I guess.',
+      'The fish used to jump right out of the water here...',
+      '*whittles a stick into a spear* You can never have too many weapons.',
+      'I wonder if the other fishing villages survived.',
+      '*scans the horizon* No boats. We\'re on our own.',
+      'My lola used to say the sea protects us. Not anymore.',
+    ],
+    idleActivity: 'craft',
     callouts: {
       enemySpotted: ['Punyeta! More of them!', 'Here they come again!'],
       attacking: ['Take that!', 'Try me, ugly!', 'Come on!'],
@@ -159,6 +186,15 @@ const NPC_DEFS = {
     color: 0xBB7766,
     hp: 50, damage: 8, attackRange: 2, attackSpeed: 1.8, zoneRadius: 18,
     combatStyle: 'scared', // fights only when cornered
+    ambientChatter: [
+      '*paces nervously* I keep hearing things...',
+      'The resort had 40 guests that weekend. Forty.',
+      '*picks through debris* Maybe there\'s food in this one...',
+      'I just want to go home. Is that too much to ask?',
+      '*stares at the sky* Do you think anyone is looking for us?',
+      'I found some canned goods earlier. Not much, but it\'s something.',
+    ],
+    idleActivity: 'gather',
     callouts: {
       enemySpotted: ['Oh god, they\'re here!', 'No no no... not again!'],
       attacking: ['Stay away from me!', 'Get back!'],
@@ -202,6 +238,15 @@ const NPC_DEFS = {
     color: 0x6633AA,
     hp: 60, damage: 12, attackRange: 6, attackSpeed: 1.5, zoneRadius: 20,
     combatStyle: 'ranged',
+    ambientChatter: [
+      '*whispers to unseen spirits* Yes... I understand...',
+      'The veil between worlds grows thinner every day.',
+      '*traces symbols in the dirt* Protection wards. They help.',
+      'I can feel the temple\'s dark energy from here. It calls to the dead.',
+      '*burns a bundle of herbs* The smoke cleanses this place.',
+      'The old gods are angry. We disturbed something that should have stayed buried.',
+    ],
+    idleActivity: 'patrol',
     callouts: {
       enemySpotted: ['The spirits warn me... danger approaches!', 'I sense dark energy!'],
       attacking: ['Begone, creature!', 'The spirits compel you!'],
@@ -680,6 +725,12 @@ export class NPCManager {
         downedTimer: 0,
         animTime: 0,
         healCooldown: 0,
+        // Idle life behavior
+        idleState: 'standing', // standing, wandering, activity, returning_home
+        idleTimer: 3 + Math.random() * 5, // time until next idle action
+        wanderTarget: null,
+        chatterTimer: 15 + Math.random() * 20, // time until ambient chatter
+        activityTimer: 0, // how long current activity has been going
       };
     }
   }
@@ -901,22 +952,155 @@ export class NPCManager {
             npc.model.position.y = gy + 0.1;
           } else {
             npc.combatState = 'idle';
+            npc.idleState = 'standing';
+            npc.idleTimer = 2 + Math.random() * 3;
           }
         }
 
-        // Face player when close and idle
+        // --- IDLE LIFE BEHAVIORS ---
         if (npc.combatState === 'idle') {
           const dx = playerPos.x - npc.model.position.x;
           const dz = playerPos.z - npc.model.position.z;
-          const dist = Math.sqrt(dx * dx + dz * dz);
-          if (dist < 10) {
+          const playerDist = Math.sqrt(dx * dx + dz * dz);
+
+          // Ambient chatter when player is nearby
+          npc.chatterTimer -= dt;
+          if (npc.chatterTimer <= 0 && playerDist < 12 && npc.def.ambientChatter) {
+            const lines = npc.def.ambientChatter;
+            const line = lines[Math.floor(Math.random() * lines.length)];
+            this.game.ui.addMessage(`${npc.def.name}: "${line}"`, 'npc');
+            npc.chatterTimer = 12 + Math.random() * 18;
+          }
+
+          // Face player if very close (overrides wander)
+          if (playerDist < 5) {
             const targetRot = Math.atan2(dx, dz);
             npc.model.rotation.y += (targetRot - npc.model.rotation.y) * 0.05;
+            npc.idleState = 'standing';
+            npc.idleTimer = 2 + Math.random() * 3;
+            // Reset arm animation
+            npc.model.children.forEach(c => {
+              if (c.userData.isArm) c.rotation.x = 0;
+            });
+          } else {
+            // Idle state machine
+            npc.idleTimer -= dt;
+
+            if (npc.idleState === 'standing') {
+              // Reset arms
+              npc.model.children.forEach(c => {
+                if (c.userData.isArm) c.rotation.x = 0;
+              });
+              if (npc.idleTimer <= 0) {
+                // Pick next action: wander or do activity
+                if (Math.random() < 0.6) {
+                  // Wander to a random nearby point
+                  const angle = Math.random() * Math.PI * 2;
+                  const dist = 2 + Math.random() * 5;
+                  npc.wanderTarget = new THREE.Vector3(
+                    npc.homePos.x + Math.cos(angle) * dist,
+                    0,
+                    npc.homePos.z + Math.sin(angle) * dist
+                  );
+                  npc.idleState = 'wandering';
+                } else {
+                  // Do an activity (gather, craft, patrol)
+                  npc.idleState = 'activity';
+                  npc.activityTimer = 4 + Math.random() * 6;
+                }
+                npc.idleTimer = 0;
+              }
+            } else if (npc.idleState === 'wandering') {
+              const wx = npc.wanderTarget.x - npc.model.position.x;
+              const wz = npc.wanderTarget.z - npc.model.position.z;
+              const wDist = Math.sqrt(wx * wx + wz * wz);
+              if (wDist > 0.3) {
+                npc.model.rotation.y = Math.atan2(wx, wz);
+                const speed = 1.2 * dt;
+                npc.model.position.x += (wx / wDist) * speed;
+                npc.model.position.z += (wz / wDist) * speed;
+                const gy = getTerrainHeightFast(npc.model.position.x, npc.model.position.z);
+                npc.model.position.y = gy + 0.1;
+                // Walk animation
+                npc.model.children.forEach(c => {
+                  if (c.userData.isArm) {
+                    c.rotation.x = Math.sin(npc.animTime * 4 + c.userData.side) * 0.4;
+                  }
+                });
+              } else {
+                // Reached destination
+                npc.idleState = 'standing';
+                npc.idleTimer = 3 + Math.random() * 5;
+              }
+            } else if (npc.idleState === 'activity') {
+              npc.activityTimer -= dt;
+              const activity = npc.def.idleActivity || 'patrol';
+
+              if (activity === 'gather') {
+                // Bobbing down/up animation (picking things up)
+                const bob = Math.sin(npc.animTime * 2) * 0.15;
+                npc.model.children.forEach(c => {
+                  if (c.userData.isArm) {
+                    c.rotation.x = -0.5 + bob;
+                  }
+                });
+                // Slowly turn in place (looking around for items)
+                npc.model.rotation.y += dt * 0.3;
+              } else if (activity === 'craft') {
+                // Hammering / working animation
+                npc.model.children.forEach(c => {
+                  if (c.userData.isArm && c.userData.side > 0) {
+                    c.rotation.x = Math.sin(npc.animTime * 6) * 0.8;
+                  }
+                });
+              } else if (activity === 'patrol') {
+                // Walk in a small circle
+                const angle = npc.animTime * 0.5;
+                const px = npc.homePos.x + Math.cos(angle) * 3;
+                const pz = npc.homePos.z + Math.sin(angle) * 3;
+                const tox = px - npc.model.position.x;
+                const toz = pz - npc.model.position.z;
+                const toDist = Math.sqrt(tox * tox + toz * toz);
+                if (toDist > 0.2) {
+                  npc.model.rotation.y = Math.atan2(tox, toz);
+                  const speed = 1.5 * dt;
+                  npc.model.position.x += (tox / toDist) * speed;
+                  npc.model.position.z += (toz / toDist) * speed;
+                  const gy = getTerrainHeightFast(npc.model.position.x, npc.model.position.z);
+                  npc.model.position.y = gy + 0.1;
+                }
+                npc.model.children.forEach(c => {
+                  if (c.userData.isArm) {
+                    c.rotation.x = Math.sin(npc.animTime * 4 + c.userData.side) * 0.3;
+                  }
+                });
+              }
+
+              if (npc.activityTimer <= 0) {
+                // Return home after activity
+                npc.idleState = 'returning_home';
+              }
+            } else if (npc.idleState === 'returning_home') {
+              const hx = npc.homePos.x - npc.model.position.x;
+              const hz = npc.homePos.z - npc.model.position.z;
+              const hDist = Math.sqrt(hx * hx + hz * hz);
+              if (hDist > 0.5) {
+                npc.model.rotation.y = Math.atan2(hx, hz);
+                npc.model.position.x += (hx / hDist) * 1.5 * dt;
+                npc.model.position.z += (hz / hDist) * 1.5 * dt;
+                const gy = getTerrainHeightFast(npc.model.position.x, npc.model.position.z);
+                npc.model.position.y = gy + 0.1;
+                npc.model.children.forEach(c => {
+                  if (c.userData.isArm) {
+                    c.rotation.x = Math.sin(npc.animTime * 4 + c.userData.side) * 0.4;
+                  }
+                });
+              } else {
+                npc.idleState = 'standing';
+                npc.idleTimer = 4 + Math.random() * 6;
+              }
+            }
           }
-          // Reset arm animation
-          npc.model.children.forEach(c => {
-            if (c.userData.isArm) c.rotation.x = 0;
-          });
         }
       }
 
@@ -926,8 +1110,8 @@ export class NPCManager {
         this.updateHealthBar(npc);
       }
 
-      // Idle bob
-      if (npc.combatState === 'idle') {
+      // Idle bob (only when standing still)
+      if (npc.combatState === 'idle' && npc.idleState === 'standing') {
         const gy = getTerrainHeightFast(npc.model.position.x, npc.model.position.z);
         npc.model.position.y = gy + 0.1 + Math.sin(Date.now() * 0.002) * 0.01;
       }

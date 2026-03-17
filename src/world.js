@@ -1016,13 +1016,22 @@ function buildNipaHut(game, x, y, z, hasBed = false) {
   // Right wall
   addBox(game, x + 1.7, y + stiltH + 1.2, z, 0.15, 2.2, 3.5, 0x9B8B60, { collider: false });
 
-  // Invisible collider walls at ground level to prevent walking through the hut
-  // Back
-  addBox(game, x, y + 0.75, z - 1.7, 3.5, 1.5, 0.15, 0x000000, { invisible: true });
-  // Left
-  addBox(game, x - 1.7, y + 0.75, z, 0.15, 1.5, 3.5, 0x000000, { invisible: true });
-  // Right
-  addBox(game, x + 1.7, y + 0.75, z, 0.15, 1.5, 3.5, 0x000000, { invisible: true });
+  // Direct Box3 colliders to prevent walking through the hut (no mesh needed)
+  // Back wall
+  game.colliders.push(new THREE.Box3(
+    new THREE.Vector3(x - 1.75, y, z - 1.85),
+    new THREE.Vector3(x + 1.75, y + stiltH + 2.5, z - 1.55)
+  ));
+  // Left wall
+  game.colliders.push(new THREE.Box3(
+    new THREE.Vector3(x - 1.85, y, z - 1.75),
+    new THREE.Vector3(x - 1.55, y + stiltH + 2.5, z + 1.75)
+  ));
+  // Right wall
+  game.colliders.push(new THREE.Box3(
+    new THREE.Vector3(x + 1.55, y, z - 1.75),
+    new THREE.Vector3(x + 1.85, y + stiltH + 2.5, z + 1.75)
+  ));
 
   const roof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 2, 4), getMat(0x8B7B45));
   roof.position.set(x, y + stiltH + 3.3, z);
