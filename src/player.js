@@ -53,6 +53,10 @@ export class Player {
     this._move = new THREE.Vector3();
     this._newPos = new THREE.Vector3();
     this._slidePos = new THREE.Vector3();
+    // Pre-allocated collision objects
+    this._collisionBox = new THREE.Box3();
+    this._collisionCenter = new THREE.Vector3();
+    this._collisionSize = new THREE.Vector3(0.6, 1.7, 0.6);
 
     // Combat
     this.attackCooldown = 0;
@@ -567,12 +571,10 @@ export class Player {
 
   checkCollision(pos) {
     if (!this.game.colliders) return false;
-    const playerBox = new THREE.Box3().setFromCenterAndSize(
-      new THREE.Vector3(pos.x, pos.y - 0.85, pos.z),
-      new THREE.Vector3(0.6, 1.7, 0.6)
-    );
+    this._collisionCenter.set(pos.x, pos.y - 0.85, pos.z);
+    this._collisionBox.setFromCenterAndSize(this._collisionCenter, this._collisionSize);
     for (const c of this.game.colliders) {
-      if (playerBox.intersectsBox(c)) return true;
+      if (this._collisionBox.intersectsBox(c)) return true;
     }
     return false;
   }
