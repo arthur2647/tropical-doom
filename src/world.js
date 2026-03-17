@@ -423,11 +423,20 @@ export function createWorld(game) {
   game.stars = stars;
 
   // --- Moon ---
-  const moonGeo = new THREE.SphereGeometry(4, 16, 12);
-  const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffee, transparent: true, opacity: 0 });
+  const moonGroup = new THREE.Group();
+  const moonGeo = new THREE.SphereGeometry(2, 16, 12);
+  const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffee, transparent: true, opacity: 0, fog: false });
   const moon = new THREE.Mesh(moonGeo, moonMat);
-  scene.add(moon);
-  game.moon = moon;
+  moonGroup.add(moon);
+  // Glow halo around the moon
+  const glowGeo = new THREE.SphereGeometry(3.5, 16, 12);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xddeeff, transparent: true, opacity: 0, fog: false, side: THREE.BackSide });
+  const moonGlow = new THREE.Mesh(glowGeo, glowMat);
+  moonGroup.add(moonGlow);
+  scene.add(moonGroup);
+  game.moon = moonGroup;
+  game.moonMat = moonMat;
+  game.moonGlowMat = glowMat;
 
   // --- Clouds ---
   game.clouds = [];
@@ -665,12 +674,14 @@ export function updateEnvironment(game, dt) {
   if (game.moon) {
     const moonAngle = game.dayTime * Math.PI * 2 + Math.PI / 2; // opposite of sun
     game.moon.position.set(
-      game.camera.position.x + Math.cos(moonAngle) * 180,
-      Math.max(10, Math.sin(moonAngle) * 150),
-      game.camera.position.z - 80
+      game.camera.position.x + Math.cos(moonAngle) * 300,
+      Math.max(20, Math.sin(moonAngle) * 250),
+      game.camera.position.z - 120
     );
     const moonVisible = game.isNight || game.dayTime > 0.7 || game.dayTime < 0.15;
-    game.moon.material.opacity = moonVisible ? 0.9 : 0;
+    const moonOpacity = moonVisible ? 0.95 : 0;
+    game.moonMat.opacity = moonOpacity;
+    game.moonGlowMat.opacity = moonVisible ? 0.12 : 0;
   }
 
   // --- Clouds drift ---
