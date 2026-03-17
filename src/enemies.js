@@ -43,549 +43,796 @@ function createEnemyModel(def) {
   const group = new THREE.Group();
   const s = def.size;
   const bp = def.bodyParts;
-  const mL = (c) => new THREE.MeshLambertMaterial({ color: c });
+  const mS = (c, rough = 0.7, metal = 0) => new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal });
+  const mSkin = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, metalness: 0 });
   const mB = (c) => new THREE.MeshBasicMaterial({ color: c });
+  const mGlow = (c, em, i = 0.5) => new THREE.MeshStandardMaterial({ color: c, metalness: 0.2, roughness: 0.4, emissive: em, emissiveIntensity: i });
 
   // --- Type-specific body builds ---
   if (def === ENEMY_DEFS.infected) {
-    // Hunched humanoid in tattered clothes
-    // Torso - slightly hunched
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(s*0.45, s*0.5, s*0.25), mL(0x556644));
-    torso.position.y = s*0.75; torso.rotation.x = 0.15;
+    // Hunched humanoid in tattered clothes - more decrepit and zombie-like
+    // Torso - heavily hunched, torn clothing
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(s*0.45, s*0.5, s*0.25), mSkin(0x4a5538));
+    torso.position.y = s*0.75; torso.rotation.x = 0.2;
     group.add(torso);
-    // Tattered shirt overlay
-    const shirt = new THREE.Mesh(new THREE.BoxGeometry(s*0.47, s*0.3, s*0.26), mL(0x667755));
-    shirt.position.y = s*0.85;
+    // Tattered shirt with rips
+    const shirt = new THREE.Mesh(new THREE.BoxGeometry(s*0.47, s*0.28, s*0.26), mS(0x556644));
+    shirt.position.y = s*0.88;
     group.add(shirt);
-    // Head - pale
-    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.18, 6, 6), mL(0x998877));
-    head.position.set(0, s*1.05, s*0.05); head.scale.set(1, 1.1, 0.9);
+    // Exposed skin/wound patches
+    for (let i = 0; i < 3; i++) {
+      const wound = new THREE.Mesh(new THREE.PlaneGeometry(s*0.06, s*0.04),
+        new THREE.MeshStandardMaterial({ color: 0x661122, roughness: 0.4, side: THREE.DoubleSide }));
+      wound.position.set((Math.random()-0.5)*s*0.3, s*(0.65+Math.random()*0.3), s*0.13);
+      wound.rotation.z = Math.random();
+      group.add(wound);
+    }
+    // Head - pale, gaunt with sunken features
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.18, 8, 8), mSkin(0x887766));
+    head.position.set(0, s*1.05, s*0.08); head.scale.set(1, 1.15, 0.85);
     group.add(head);
-    // Sunken eyes
+    // Sunken cheeks
     for (const side of [-1, 1]) {
-      const socket = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 4, 4), mL(0x333322));
-      socket.position.set(side*s*0.07, s*1.07, s*0.18);
+      const cheek = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 4, 4), mSkin(0x665544));
+      cheek.position.set(side*s*0.1, s*1.0, s*0.12);
+      cheek.scale.set(1, 1.3, 0.5);
+      group.add(cheek);
+    }
+    // Deep dark eye sockets with glowing eyes
+    for (const side of [-1, 1]) {
+      const socket = new THREE.Mesh(new THREE.SphereGeometry(s*0.05, 5, 5), mS(0x1a1a11, 0.3));
+      socket.position.set(side*s*0.07, s*1.08, s*0.16);
       group.add(socket);
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.025, 4, 4), mB(0xffaa00));
-      eye.position.set(side*s*0.07, s*1.07, s*0.2);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.025, 4, 4), mGlow(0xffcc00, 0xffaa00, 0.8));
+      eye.position.set(side*s*0.07, s*1.08, s*0.2);
       group.add(eye);
     }
-    // Slack jaw
-    const jaw = new THREE.Mesh(new THREE.BoxGeometry(s*0.1, s*0.04, s*0.06), mL(0x885555));
-    jaw.position.set(0, s*0.95, s*0.15);
+    // Slack jaw with drool
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(s*0.12, s*0.05, s*0.07), mSkin(0x775544));
+    jaw.position.set(0, s*0.94, s*0.15); jaw.rotation.x = 0.15;
     group.add(jaw);
-    // Arms - one reaching forward
+    // Exposed teeth
+    for (let i = 0; i < 4; i++) {
+      const tooth = new THREE.Mesh(new THREE.BoxGeometry(s*0.015, s*0.02, s*0.01), mS(0xccbb88));
+      tooth.position.set((i-1.5)*s*0.025, s*0.96, s*0.18);
+      group.add(tooth);
+    }
+    // Drool strand
+    const drool = new THREE.Mesh(new THREE.CylinderGeometry(s*0.003, s*0.002, s*0.08, 3),
+      new THREE.MeshStandardMaterial({ color: 0xaabb99, transparent: true, opacity: 0.5 }));
+    drool.position.set(s*0.02, s*0.9, s*0.17);
+    group.add(drool);
+    // Arms - one reaching forward, skin lesions
     for (const side of [-1, 1]) {
-      const upper = new THREE.Mesh(new THREE.BoxGeometry(s*0.1, s*0.3, s*0.1), mL(bp.limbs));
-      upper.position.set(side*s*0.3, s*0.7, side > 0 ? s*0.15 : 0);
-      upper.rotation.x = side > 0 ? -0.6 : 0;
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(s*0.05, s*0.045, s*0.3, 5), mSkin(bp.limbs));
+      upper.position.set(side*s*0.28, s*0.7, side > 0 ? s*0.12 : 0);
+      upper.rotation.x = side > 0 ? -0.7 : -0.1;
       group.add(upper);
-      const hand = new THREE.Mesh(new THREE.BoxGeometry(s*0.08, s*0.08, s*0.04), mL(0x998877));
-      hand.position.set(side*s*0.3, s*0.5, side > 0 ? s*0.3 : 0);
+      const fore = new THREE.Mesh(new THREE.CylinderGeometry(s*0.04, s*0.035, s*0.25, 5), mSkin(bp.limbs));
+      fore.position.set(side*s*0.28, s*0.5, side > 0 ? s*0.25 : 0);
+      fore.rotation.x = side > 0 ? -0.3 : 0;
+      group.add(fore);
+      // Gnarled fingers
+      const hand = new THREE.Mesh(new THREE.BoxGeometry(s*0.07, s*0.06, s*0.04), mSkin(0x887766));
+      hand.position.set(side*s*0.28, s*0.38, side > 0 ? s*0.32 : 0);
       group.add(hand);
     }
-    // Legs in shorts
+    // Legs - shuffling stance
     for (const side of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(s*0.14, s*0.4, s*0.14), mL(0x554433));
-      leg.position.set(side*s*0.13, s*0.2, 0);
-      group.add(leg);
-      const foot = new THREE.Mesh(new THREE.BoxGeometry(s*0.12, s*0.05, s*0.16), mL(0x443322));
-      foot.position.set(side*s*0.13, s*0.02, s*0.03);
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(s*0.065, s*0.055, s*0.25, 5), mS(0x443322));
+      thigh.position.set(side*s*0.12, s*0.3, side > 0 ? s*0.04 : 0);
+      group.add(thigh);
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(s*0.05, s*0.045, s*0.2, 5), mSkin(bp.limbs));
+      shin.position.set(side*s*0.12, s*0.1, side > 0 ? s*0.04 : 0);
+      group.add(shin);
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(s*0.1, s*0.04, s*0.14), mS(0x332211));
+      foot.position.set(side*s*0.12, s*0.02, s*0.03);
       group.add(foot);
     }
+
   } else if (def === ENEMY_DEFS.aswang) {
-    // Crouched, long-armed creature with claws and fangs
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(s*0.4, s*0.45, s*0.3), mL(bp.body));
-    torso.position.y = s*0.65; torso.rotation.x = 0.3;
+    // Crouched predator - lean, angular, canine-like with elongated limbs
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(s*0.4, s*0.45, s*0.3), mSkin(bp.body));
+    torso.position.y = s*0.65; torso.rotation.x = 0.35;
     group.add(torso);
-    // Spine ridges
-    for (let i = 0; i < 3; i++) {
-      const spike = new THREE.Mesh(new THREE.ConeGeometry(s*0.03, s*0.08, 4), mL(0x220000));
-      spike.position.set(0, s*(0.75 + i*0.08), -s*0.15);
+    // Visible ribcage under taut skin
+    for (let i = 0; i < 4; i++) {
+      const rib = new THREE.Mesh(new THREE.TorusGeometry(s*0.14, s*0.008, 4, 6, Math.PI*0.8),
+        mS(0x551111, 0.5));
+      rib.position.set(0, s*(0.58 + i*0.06), s*0.1);
+      rib.rotation.x = Math.PI * 0.5;
+      group.add(rib);
+    }
+    // Spine ridges - prominent vertebrae
+    for (let i = 0; i < 5; i++) {
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(s*0.025, s*0.06, 4), mS(0x330000, 0.6));
+      spike.position.set(0, s*(0.72 + i*0.06), -s*0.15);
       spike.rotation.x = -0.3;
       group.add(spike);
     }
-    // Head with long hair
-    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.2, 6, 6), mL(bp.head));
-    head.position.set(0, s*0.95, s*0.1); head.scale.set(1, 1.1, 0.85);
+    // Head - elongated skull, predatory
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.2, 8, 8), mSkin(bp.head));
+    head.position.set(0, s*0.95, s*0.12); head.scale.set(0.9, 1.15, 1.1);
     group.add(head);
-    // Stringy hair
-    for (let i = 0; i < 5; i++) {
-      const hair = new THREE.Mesh(new THREE.BoxGeometry(s*0.02, s*0.25, s*0.01), mL(0x1a0505));
-      hair.position.set((i-2)*s*0.06, s*1.0, -s*0.1);
-      hair.rotation.x = 0.3 + Math.random()*0.3;
+    // Stringy matted hair
+    for (let i = 0; i < 8; i++) {
+      const hair = new THREE.Mesh(new THREE.CylinderGeometry(s*0.008, s*0.004, s*(0.2+Math.random()*0.15), 3),
+        mS(0x1a0505, 0.9));
+      hair.position.set((i-3.5)*s*0.04, s*1.0, -s*0.08);
+      hair.rotation.x = 0.4 + Math.random()*0.5;
+      hair.rotation.z = (Math.random()-0.5)*0.4;
       group.add(hair);
     }
-    // Glowing red eyes
+    // Glowing red eyes - larger, more menacing
     for (const side of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.05, 4, 4), mB(0xff0000));
-      eye.position.set(side*s*0.08, s*0.98, s*0.22);
+      const socket = new THREE.Mesh(new THREE.SphereGeometry(s*0.06, 5, 5), mS(0x110000, 0.2));
+      socket.position.set(side*s*0.08, s*0.98, s*0.22);
+      group.add(socket);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 5, 5), mGlow(0xff0000, 0xff0000, 1.0));
+      eye.position.set(side*s*0.08, s*0.98, s*0.25);
       group.add(eye);
     }
-    // Wide mouth with fangs
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(s*0.12, s*0.03, s*0.04), mL(0x440000));
-    mouth.position.set(0, s*0.88, s*0.2);
+    // Wide gaping mouth with rows of teeth
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(s*0.14, s*0.06, s*0.05), mS(0x330000, 0.3));
+    mouth.position.set(0, s*0.86, s*0.22);
     group.add(mouth);
-    for (const side of [-0.03, 0.03]) {
-      const fang = new THREE.Mesh(new THREE.ConeGeometry(s*0.012, s*0.04, 4), mL(0xeeeecc));
-      fang.position.set(side*s, s*0.85, s*0.2);
+    // Upper fangs
+    for (const x of [-0.04, -0.015, 0.015, 0.04]) {
+      const fang = new THREE.Mesh(new THREE.ConeGeometry(s*0.01, s*0.05, 4), mS(0xeeddcc, 0.3));
+      fang.position.set(x*s, s*0.82, s*0.22);
       fang.rotation.x = Math.PI;
       group.add(fang);
     }
-    // Long arms with claws
-    for (const side of [-1, 1]) {
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(s*0.1, s*0.5, s*0.1), mL(bp.limbs));
-      arm.position.set(side*s*0.3, s*0.5, s*0.1);
-      arm.rotation.x = -0.4;
-      group.add(arm);
-      for (let c = -1; c <= 1; c++) {
-        const claw = new THREE.Mesh(new THREE.ConeGeometry(s*0.015, s*0.08, 3), mL(0x332222));
-        claw.position.set(side*s*0.3 + c*s*0.025, s*0.22, s*0.2);
-        claw.rotation.x = -0.5;
-        group.add(claw);
-      }
-    }
-    // Crouched legs
-    for (const side of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(s*0.13, s*0.35, s*0.13), mL(bp.limbs));
-      leg.position.set(side*s*0.15, s*0.18, 0);
-      group.add(leg);
-    }
-  } else if (def === ENEMY_DEFS.tiyanak) {
-    // Tiny demonic baby - oversized head, small body
-    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.4, 8, 6), mL(0xBBAA99));
-    head.position.y = s*0.6; head.scale.set(1, 1.1, 0.9);
-    group.add(head);
-    // Dark eye sockets
-    for (const side of [-1, 1]) {
-      const socket = new THREE.Mesh(new THREE.SphereGeometry(s*0.12, 4, 4), mL(0x221111));
-      socket.position.set(side*s*0.15, s*0.65, s*0.3);
-      group.add(socket);
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 4, 4), mB(0xff4400));
-      pupil.position.set(side*s*0.15, s*0.65, s*0.38);
-      group.add(pupil);
-    }
-    // Grin
-    const grin = new THREE.Mesh(new THREE.BoxGeometry(s*0.25, s*0.04, s*0.02), mL(0x330000));
-    grin.position.set(0, s*0.45, s*0.35);
-    group.add(grin);
-    // Tiny teeth
-    for (let i = 0; i < 5; i++) {
-      const tooth = new THREE.Mesh(new THREE.ConeGeometry(s*0.01, s*0.03, 3), mL(0xddddaa));
-      tooth.position.set((i-2)*s*0.05, s*0.44, s*0.36);
-      tooth.rotation.x = Math.PI;
+    // Lower teeth
+    for (const x of [-0.03, 0, 0.03]) {
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(s*0.008, s*0.03, 3), mS(0xddccbb, 0.3));
+      tooth.position.set(x*s, s*0.89, s*0.22);
       group.add(tooth);
     }
-    // Tiny body
-    const body = new THREE.Mesh(new THREE.BoxGeometry(s*0.3, s*0.25, s*0.2), mL(0xAA9988));
-    body.position.y = s*0.2;
-    group.add(body);
-    // Stubby arms reaching out
+    // Blood dripping from mouth
+    const blood = new THREE.Mesh(new THREE.CylinderGeometry(s*0.005, s*0.003, s*0.06, 3),
+      new THREE.MeshStandardMaterial({ color: 0xaa0011, roughness: 0.2, metalness: 0.3 }));
+    blood.position.set(s*0.02, s*0.8, s*0.23);
+    group.add(blood);
+    // Long arms with claws - more articulated
     for (const side of [-1, 1]) {
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(s*0.08, s*0.2, s*0.08), mL(0xBBAA99));
-      arm.position.set(side*s*0.22, s*0.25, s*0.1);
-      arm.rotation.x = -0.5;
-      group.add(arm);
-    }
-    // Stubby legs
-    for (const side of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(s*0.1, s*0.12, s*0.1), mL(0xAA9988));
-      leg.position.set(side*s*0.1, s*0.05, 0);
-      group.add(leg);
-    }
-  } else if (def === ENEMY_DEFS.tikbalang) {
-    // Tall horse-headed humanoid
-    // Muscular torso
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(s*0.5, s*0.5, s*0.3), mL(bp.body));
-    torso.position.y = s*0.75;
-    group.add(torso);
-    // Broad shoulders
-    const shoulders = new THREE.Mesh(new THREE.BoxGeometry(s*0.6, s*0.1, s*0.28), mL(bp.body));
-    shoulders.position.y = s*1.0;
-    group.add(shoulders);
-    // Horse head - elongated
-    const head = new THREE.Mesh(new THREE.BoxGeometry(s*0.2, s*0.25, s*0.35), mL(bp.head));
-    head.position.set(0, s*1.2, s*0.08);
-    group.add(head);
-    // Snout
-    const snout = new THREE.Mesh(new THREE.BoxGeometry(s*0.14, s*0.12, s*0.2), mL(bp.head));
-    snout.position.set(0, s*1.1, s*0.25);
-    group.add(snout);
-    // Nostrils
-    for (const side of [-1, 1]) {
-      const nostril = new THREE.Mesh(new THREE.SphereGeometry(s*0.02, 4, 4), mL(0x221100));
-      nostril.position.set(side*s*0.04, s*1.08, s*0.35);
-      group.add(nostril);
-    }
-    // Amber eyes
-    for (const side of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 4, 4), mB(0xffcc00));
-      eye.position.set(side*s*0.08, s*1.22, s*0.2);
-      group.add(eye);
-    }
-    // Wild mane
-    for (let i = 0; i < 7; i++) {
-      const hair = new THREE.Mesh(new THREE.BoxGeometry(s*0.03, s*0.2+Math.random()*s*0.1, s*0.02), mL(0x1a0a00));
-      hair.position.set((i-3)*s*0.04, s*1.3, -s*0.05);
-      hair.rotation.x = 0.5;
-      group.add(hair);
-    }
-    // Muscular arms
-    for (const side of [-1, 1]) {
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(s*0.14, s*0.45, s*0.14), mL(bp.limbs));
-      arm.position.set(side*s*0.38, s*0.7, 0);
-      group.add(arm);
-      // Hooved fist
-      const hoof = new THREE.Mesh(new THREE.BoxGeometry(s*0.1, s*0.08, s*0.12), mL(0x332211));
-      hoof.position.set(side*s*0.38, s*0.45, 0);
-      group.add(hoof);
-    }
-    // Digitigrade legs
-    for (const side of [-1, 1]) {
-      const thigh = new THREE.Mesh(new THREE.BoxGeometry(s*0.16, s*0.3, s*0.16), mL(bp.limbs));
-      thigh.position.set(side*s*0.15, s*0.35, 0);
-      group.add(thigh);
-      const shin = new THREE.Mesh(new THREE.BoxGeometry(s*0.12, s*0.25, s*0.12), mL(bp.limbs));
-      shin.position.set(side*s*0.15, s*0.1, s*0.05);
-      group.add(shin);
-      const hoof = new THREE.Mesh(new THREE.CylinderGeometry(s*0.06, s*0.08, s*0.06, 6), mL(0x332211));
-      hoof.position.set(side*s*0.15, s*0.02, s*0.05);
-      group.add(hoof);
-    }
-  } else if (def === ENEMY_DEFS.manananggal) {
-    // Half-bodied flying creature - upper torso with bat wings, dangling entrails, no legs
-    const mGlow = (c, em, i = 0.3) => new THREE.MeshStandardMaterial({ color: c, metalness: 0.2, roughness: 0.5, emissive: em, emissiveIntensity: i });
-    // Upper torso
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(s*0.45, s*0.4, s*0.25), mL(bp.body));
-    torso.position.y = s*0.9;
-    group.add(torso);
-    // Exposed ribcage at bottom
-    for (let i = 0; i < 4; i++) {
-      const rib = new THREE.Mesh(new THREE.TorusGeometry(s*0.12, s*0.015, 4, 8, Math.PI), mL(0xccbbaa));
-      rib.position.set(0, s*(0.72 - i*0.05), s*0.02);
-      rib.rotation.x = Math.PI * 0.5;
-      rib.rotation.z = Math.PI;
-      group.add(rib);
-    }
-    // Dangling entrails/intestines
-    for (let i = 0; i < 5; i++) {
-      const len = s*(0.2 + Math.random()*0.2);
-      const entrail = new THREE.Mesh(new THREE.CylinderGeometry(s*0.015, s*0.01, len, 5), mL(0x882244));
-      entrail.position.set((Math.random()-0.5)*s*0.25, s*0.55 - len/2, (Math.random()-0.5)*s*0.1);
-      entrail.rotation.z = (Math.random()-0.5)*0.3;
-      group.add(entrail);
-    }
-    // Blood drip spheres at bottom
-    for (let i = 0; i < 3; i++) {
-      const drip = new THREE.Mesh(new THREE.SphereGeometry(s*0.02, 4, 4), mB(0xaa0022));
-      drip.position.set((Math.random()-0.5)*s*0.2, s*(0.35 + Math.random()*0.1), 0);
-      group.add(drip);
-    }
-    // Head - wild-eyed with long tongue
-    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.2, 8, 6), mL(bp.head));
-    head.position.set(0, s*1.15, s*0.05); head.scale.set(1, 1.1, 0.9);
-    group.add(head);
-    // Long wild hair
-    for (let i = 0; i < 8; i++) {
-      const hair = new THREE.Mesh(new THREE.BoxGeometry(s*0.025, s*(0.2+Math.random()*0.15), s*0.015), mL(0x0a0005));
-      hair.position.set((i-3.5)*s*0.05, s*1.15, -s*0.1);
-      hair.rotation.x = 0.4 + Math.random()*0.4;
-      hair.rotation.z = (Math.random()-0.5)*0.3;
-      group.add(hair);
-    }
-    // Bloodshot eyes
-    for (const side of [-1, 1]) {
-      const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(s*0.06, 6, 6), mL(0xffddcc));
-      eyeWhite.position.set(side*s*0.08, s*1.18, s*0.16);
-      group.add(eyeWhite);
-      const pupil = new THREE.Mesh(new THREE.SphereGeometry(s*0.03, 4, 4), mB(0xff0000));
-      pupil.position.set(side*s*0.08, s*1.18, s*0.21);
-      group.add(pupil);
-    }
-    // Wide open mouth with fangs
-    const mouth = new THREE.Mesh(new THREE.BoxGeometry(s*0.14, s*0.06, s*0.04), mL(0x440000));
-    mouth.position.set(0, s*1.05, s*0.18);
-    group.add(mouth);
-    for (const x of [-0.04, -0.02, 0.02, 0.04]) {
-      const fang = new THREE.Mesh(new THREE.ConeGeometry(s*0.01, s*0.04, 3), mL(0xeeeedd));
-      fang.position.set(x*s, s*1.01, s*0.18);
-      fang.rotation.x = Math.PI;
-      group.add(fang);
-    }
-    // Long tongue
-    const tongue = new THREE.Mesh(new THREE.BoxGeometry(s*0.03, s*0.02, s*0.2), mL(0xcc2255));
-    tongue.position.set(0, s*1.02, s*0.28);
-    tongue.rotation.x = 0.3;
-    group.add(tongue);
-    // Arms - elongated with claws
-    for (const side of [-1, 1]) {
-      const upper = new THREE.Mesh(new THREE.BoxGeometry(s*0.1, s*0.35, s*0.1), mL(bp.limbs));
-      upper.position.set(side*s*0.32, s*0.85, 0);
-      upper.rotation.z = side * 0.3;
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(s*0.05, s*0.04, s*0.35, 5), mSkin(bp.limbs));
+      upper.position.set(side*s*0.28, s*0.55, s*0.1);
+      upper.rotation.x = -0.5;
+      upper.rotation.z = side * 0.15;
       group.add(upper);
-      const fore = new THREE.Mesh(new THREE.BoxGeometry(s*0.08, s*0.3, s*0.08), mL(bp.limbs));
-      fore.position.set(side*s*0.4, s*0.55, s*0.05);
+      const fore = new THREE.Mesh(new THREE.CylinderGeometry(s*0.04, s*0.03, s*0.3, 5), mSkin(bp.limbs));
+      fore.position.set(side*s*0.32, s*0.35, s*0.2);
       fore.rotation.x = -0.3;
       group.add(fore);
+      // Splayed fingers with long claws
       for (let c = -1; c <= 1; c++) {
-        const claw = new THREE.Mesh(new THREE.ConeGeometry(s*0.012, s*0.06, 3), mL(0x221111));
-        claw.position.set(side*s*0.4 + c*s*0.025, s*0.38, s*0.12);
+        const finger = new THREE.Mesh(new THREE.CylinderGeometry(s*0.008, s*0.005, s*0.06, 3), mSkin(bp.limbs));
+        finger.position.set(side*s*0.32 + c*s*0.02, s*0.2, s*0.28);
+        finger.rotation.x = -0.4;
+        group.add(finger);
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(s*0.008, s*0.06, 3), mS(0x221111, 0.3));
+        claw.position.set(side*s*0.32 + c*s*0.02, s*0.14, s*0.32);
         claw.rotation.x = -0.6;
         group.add(claw);
       }
     }
-    // Bat wings - multi-segment membrane
+    // Crouched digitigrade legs
     for (const side of [-1, 1]) {
-      // Wing bone
-      const bone1 = new THREE.Mesh(new THREE.CylinderGeometry(s*0.02, s*0.015, s*0.6, 4), mL(0x331133));
-      bone1.position.set(side*s*0.5, s*1.0, -s*0.08);
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(s*0.06, s*0.05, s*0.25, 5), mSkin(bp.limbs));
+      thigh.position.set(side*s*0.14, s*0.28, -s*0.05);
+      thigh.rotation.x = 0.3;
+      group.add(thigh);
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(s*0.04, s*0.035, s*0.2, 5), mSkin(bp.limbs));
+      shin.position.set(side*s*0.14, s*0.1, s*0.02);
+      group.add(shin);
+    }
+
+  } else if (def === ENEMY_DEFS.tiyanak) {
+    // Demonic infant - uncanny valley baby with wrong proportions
+    // Oversized head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.4, 10, 8), mSkin(0xBBAA99));
+    head.position.y = s*0.6; head.scale.set(1, 1.15, 0.95);
+    group.add(head);
+    // Fontanelle - pulsing soft spot
+    const fontanelle = new THREE.Mesh(new THREE.SphereGeometry(s*0.1, 6, 6),
+      mGlow(0x998877, 0x442211, 0.3));
+    fontanelle.position.y = s*0.82;
+    fontanelle.scale.y = 0.3;
+    group.add(fontanelle);
+    // Dark hollow eye sockets - too large for head
+    for (const side of [-1, 1]) {
+      const socket = new THREE.Mesh(new THREE.SphereGeometry(s*0.14, 6, 6), mS(0x110505, 0.2));
+      socket.position.set(side*s*0.14, s*0.65, s*0.28);
+      socket.scale.set(1, 1.2, 0.5);
+      group.add(socket);
+      // Tiny glowing pupils in huge sockets
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 5, 5), mGlow(0xff4400, 0xff2200, 1.2));
+      pupil.position.set(side*s*0.14, s*0.65, s*0.38);
+      group.add(pupil);
+    }
+    // Wide unnatural grin - ear to ear
+    const grin = new THREE.Mesh(new THREE.TorusGeometry(s*0.15, s*0.02, 4, 8, Math.PI),
+      mS(0x330000, 0.3));
+    grin.position.set(0, s*0.45, s*0.32);
+    grin.rotation.x = Math.PI;
+    group.add(grin);
+    // Sharp needle teeth
+    for (let i = 0; i < 8; i++) {
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(s*0.008, s*0.04, 3), mS(0xeeeedd, 0.2));
+      tooth.position.set((i-3.5)*s*0.035, s*0.43, s*0.35);
+      tooth.rotation.x = Math.PI;
+      group.add(tooth);
+    }
+    // Small twisted body
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(s*0.12, s*0.1, s*0.2, 6), mSkin(0xAA9988));
+    body.position.y = s*0.2;
+    group.add(body);
+    // Swollen belly
+    const belly = new THREE.Mesh(new THREE.SphereGeometry(s*0.13, 6, 6), mSkin(0xBBAA99));
+    belly.position.set(0, s*0.2, s*0.05);
+    belly.scale.set(1, 0.8, 1.1);
+    group.add(belly);
+    // Stubby arms with tiny claws - reaching out
+    for (const side of [-1, 1]) {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(s*0.04, s*0.03, s*0.18, 4), mSkin(0xBBAA99));
+      arm.position.set(side*s*0.18, s*0.25, s*0.08);
+      arm.rotation.x = -0.6;
+      arm.rotation.z = side * -0.3;
+      group.add(arm);
+      // Tiny clawed fingers
+      for (let f = 0; f < 3; f++) {
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(s*0.005, s*0.03, 3), mS(0x332222, 0.3));
+        claw.position.set(side*s*0.18 + (f-1)*s*0.015, s*0.15, s*0.16);
+        claw.rotation.x = -0.5;
+        group.add(claw);
+      }
+    }
+    // Stubby legs
+    for (const side of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(s*0.05, s*0.04, s*0.12, 4), mSkin(0xAA9988));
+      leg.position.set(side*s*0.08, s*0.06, 0);
+      group.add(leg);
+    }
+    // Dark aura around the creature
+    const aura = new THREE.Mesh(new THREE.SphereGeometry(s*0.5, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0x220000, transparent: true, opacity: 0.08 }));
+    aura.position.y = s*0.4;
+    group.add(aura);
+
+  } else if (def === ENEMY_DEFS.tikbalang) {
+    // Tall horse-headed humanoid - massive, threatening
+    // Muscular torso with visible muscle definition
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(s*0.22, s*0.2, s*0.5, 6), mSkin(bp.body));
+    torso.position.y = s*0.75;
+    group.add(torso);
+    // Chest plates / pectoral muscles
+    for (const side of [-1, 1]) {
+      const pec = new THREE.Mesh(new THREE.SphereGeometry(s*0.1, 5, 5), mSkin(bp.body));
+      pec.position.set(side*s*0.08, s*0.85, s*0.1);
+      pec.scale.set(1.2, 0.8, 0.5);
+      group.add(pec);
+    }
+    // Broad shoulders with bone spurs
+    const shoulders = new THREE.Mesh(new THREE.BoxGeometry(s*0.65, s*0.1, s*0.3), mSkin(bp.body));
+    shoulders.position.y = s*1.02;
+    group.add(shoulders);
+    for (const side of [-1, 1]) {
+      const spur = new THREE.Mesh(new THREE.ConeGeometry(s*0.03, s*0.1, 4), mS(0x443322, 0.5));
+      spur.position.set(side*s*0.32, s*1.08, 0);
+      spur.rotation.z = side * 0.5;
+      group.add(spur);
+    }
+    // Horse head - elongated, terrifying
+    const skull = new THREE.Mesh(new THREE.BoxGeometry(s*0.2, s*0.28, s*0.38), mSkin(bp.head));
+    skull.position.set(0, s*1.22, s*0.06);
+    group.add(skull);
+    // Elongated snout
+    const snout = new THREE.Mesh(new THREE.BoxGeometry(s*0.16, s*0.14, s*0.22), mSkin(bp.head));
+    snout.position.set(0, s*1.1, s*0.26);
+    group.add(snout);
+    // Flared nostrils with steam effect
+    for (const side of [-1, 1]) {
+      const nostril = new THREE.Mesh(new THREE.SphereGeometry(s*0.025, 4, 4), mS(0x220000, 0.3));
+      nostril.position.set(side*s*0.05, s*1.08, s*0.37);
+      group.add(nostril);
+      const steam = new THREE.Mesh(new THREE.SphereGeometry(s*0.02, 4, 4),
+        new THREE.MeshBasicMaterial({ color: 0xcccccc, transparent: true, opacity: 0.15 }));
+      steam.position.set(side*s*0.05, s*1.06, s*0.4);
+      group.add(steam);
+    }
+    // Burning amber eyes
+    for (const side of [-1, 1]) {
+      const socket = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 5, 5), mS(0x221100, 0.2));
+      socket.position.set(side*s*0.08, s*1.24, s*0.2);
+      group.add(socket);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.035, 5, 5), mGlow(0xffcc00, 0xff8800, 0.9));
+      eye.position.set(side*s*0.08, s*1.24, s*0.23);
+      group.add(eye);
+    }
+    // Ears - pointed, horse-like
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(s*0.03, s*0.1, 4), mSkin(bp.head));
+      ear.position.set(side*s*0.1, s*1.38, s*0.02);
+      ear.rotation.z = side * 0.3;
+      group.add(ear);
+    }
+    // Wild mane - thicker, more dramatic
+    for (let i = 0; i < 12; i++) {
+      const hair = new THREE.Mesh(new THREE.CylinderGeometry(s*0.012, s*0.008, s*(0.2+Math.random()*0.15), 3),
+        mS(0x1a0a00, 0.9));
+      hair.position.set((i-5.5)*s*0.03, s*1.35, -s*0.08);
+      hair.rotation.x = 0.5 + Math.random()*0.4;
+      hair.rotation.z = (Math.random()-0.5)*0.3;
+      group.add(hair);
+    }
+    // Massive muscular arms
+    for (const side of [-1, 1]) {
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(s*0.08, s*0.07, s*0.35, 6), mSkin(bp.limbs));
+      upper.position.set(side*s*0.38, s*0.8, 0);
+      upper.rotation.z = side * 0.1;
+      group.add(upper);
+      const fore = new THREE.Mesh(new THREE.CylinderGeometry(s*0.07, s*0.06, s*0.3, 6), mSkin(bp.limbs));
+      fore.position.set(side*s*0.4, s*0.5, s*0.03);
+      group.add(fore);
+      // Hooved fist - keratin
+      const hoof = new THREE.Mesh(new THREE.CylinderGeometry(s*0.06, s*0.07, s*0.08, 6), mS(0x221100, 0.4));
+      hoof.position.set(side*s*0.4, s*0.33, s*0.03);
+      group.add(hoof);
+    }
+    // Digitigrade legs - powerful
+    for (const side of [-1, 1]) {
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(s*0.09, s*0.07, s*0.3, 6), mSkin(bp.limbs));
+      thigh.position.set(side*s*0.15, s*0.38, -s*0.03);
+      thigh.rotation.x = 0.2;
+      group.add(thigh);
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(s*0.06, s*0.05, s*0.25, 6), mSkin(bp.limbs));
+      shin.position.set(side*s*0.15, s*0.12, s*0.05);
+      shin.rotation.x = -0.15;
+      group.add(shin);
+      const hoof = new THREE.Mesh(new THREE.CylinderGeometry(s*0.05, s*0.07, s*0.06, 6), mS(0x221100, 0.4));
+      hoof.position.set(side*s*0.15, s*0.02, s*0.06);
+      group.add(hoof);
+    }
+
+  } else if (def === ENEMY_DEFS.manananggal) {
+    // Half-bodied flying creature - visceral horror, exposed organs, bat wings
+    // Upper torso - with visible damage at separation point
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(s*0.2, s*0.22, s*0.4, 8), mSkin(bp.body));
+    torso.position.y = s*0.9;
+    group.add(torso);
+    // Breasts/chest definition
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(s*0.42, s*0.15, s*0.22), mSkin(bp.body));
+    chest.position.y = s*1.0;
+    group.add(chest);
+    // Exposed ribcage at separation - more detailed
+    for (let i = 0; i < 5; i++) {
+      const rib = new THREE.Mesh(new THREE.TorusGeometry(s*0.13, s*0.012, 4, 10, Math.PI),
+        mS(0xddccbb, 0.4, 0.1));
+      rib.position.set(0, s*(0.72 - i*0.04), s*0.02);
+      rib.rotation.x = Math.PI * 0.5;
+      rib.rotation.z = Math.PI;
+      group.add(rib);
+    }
+    // Spine stump visible
+    const spine = new THREE.Mesh(new THREE.CylinderGeometry(s*0.03, s*0.04, s*0.15, 5), mS(0xccbbaa, 0.4));
+    spine.position.set(0, s*0.55, -s*0.05);
+    group.add(spine);
+    // Dangling entrails/intestines - longer, more visceral
+    for (let i = 0; i < 7; i++) {
+      const len = s*(0.15 + Math.random()*0.25);
+      const thick = s*(0.01 + Math.random()*0.008);
+      const entrail = new THREE.Mesh(new THREE.CylinderGeometry(thick, thick*0.6, len, 5),
+        mS(0x882244, 0.3, 0.1));
+      entrail.position.set((Math.random()-0.5)*s*0.2, s*0.55 - len/2, (Math.random()-0.5)*s*0.12);
+      entrail.rotation.z = (Math.random()-0.5)*0.4;
+      entrail.rotation.x = (Math.random()-0.5)*0.2;
+      group.add(entrail);
+    }
+    // Blood drips - animated looking
+    for (let i = 0; i < 5; i++) {
+      const drip = new THREE.Mesh(new THREE.SphereGeometry(s*0.015, 4, 4),
+        mGlow(0xaa0022, 0x880011, 0.3));
+      drip.position.set((Math.random()-0.5)*s*0.2, s*(0.3 + Math.random()*0.15), (Math.random()-0.5)*s*0.1);
+      group.add(drip);
+    }
+    // Head - wild-eyed, inhuman beauty twisted into horror
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.2, 10, 8), mSkin(bp.head));
+    head.position.set(0, s*1.18, s*0.05); head.scale.set(1, 1.1, 0.9);
+    group.add(head);
+    // Long wild hair - flowing behind
+    for (let i = 0; i < 12; i++) {
+      const hair = new THREE.Mesh(
+        new THREE.CylinderGeometry(s*0.01, s*0.005, s*(0.2+Math.random()*0.2), 3),
+        mS(0x0a0005, 0.9));
+      hair.position.set((i-5.5)*s*0.035, s*1.15, -s*0.1);
+      hair.rotation.x = 0.4 + Math.random()*0.5;
+      hair.rotation.z = (Math.random()-0.5)*0.4;
+      group.add(hair);
+    }
+    // Bloodshot eyes - wide, manic
+    for (const side of [-1, 1]) {
+      const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(s*0.065, 8, 8), mS(0xffddcc, 0.3));
+      eyeWhite.position.set(side*s*0.08, s*1.2, s*0.16);
+      group.add(eyeWhite);
+      // Blood vessels in eye
+      const vein = new THREE.Mesh(new THREE.CylinderGeometry(s*0.003, s*0.002, s*0.05, 3),
+        new THREE.MeshBasicMaterial({ color: 0xcc0000, transparent: true, opacity: 0.5 }));
+      vein.position.set(side*s*0.1, s*1.2, s*0.17);
+      vein.rotation.z = side * 0.5;
+      group.add(vein);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(s*0.03, 5, 5), mGlow(0xff0000, 0xff0000, 1.0));
+      pupil.position.set(side*s*0.08, s*1.2, s*0.22);
+      group.add(pupil);
+    }
+    // Wide gaping mouth - hinged jaw
+    const upperJaw = new THREE.Mesh(new THREE.BoxGeometry(s*0.15, s*0.03, s*0.06), mSkin(bp.head));
+    upperJaw.position.set(0, s*1.09, s*0.17);
+    group.add(upperJaw);
+    const lowerJaw = new THREE.Mesh(new THREE.BoxGeometry(s*0.14, s*0.03, s*0.05), mSkin(bp.head));
+    lowerJaw.position.set(0, s*1.03, s*0.18);
+    lowerJaw.rotation.x = 0.2;
+    group.add(lowerJaw);
+    const mouthInside = new THREE.Mesh(new THREE.BoxGeometry(s*0.12, s*0.05, s*0.04), mS(0x440000, 0.3));
+    mouthInside.position.set(0, s*1.06, s*0.17);
+    group.add(mouthInside);
+    // Large fangs
+    for (const x of [-0.045, -0.015, 0.015, 0.045]) {
+      const fang = new THREE.Mesh(new THREE.ConeGeometry(s*0.01, s*0.05, 4), mS(0xeeddcc, 0.2));
+      fang.position.set(x*s, s*1.01, s*0.18);
+      fang.rotation.x = Math.PI;
+      group.add(fang);
+    }
+    // Long prehensile tongue
+    const tongue = new THREE.Mesh(new THREE.CylinderGeometry(s*0.015, s*0.008, s*0.25, 5), mS(0xcc2255, 0.3));
+    tongue.position.set(0, s*1.0, s*0.25);
+    tongue.rotation.x = -0.8;
+    group.add(tongue);
+    // Arms - elongated, unnaturally long with talons
+    for (const side of [-1, 1]) {
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(s*0.05, s*0.04, s*0.35, 5), mSkin(bp.limbs));
+      upper.position.set(side*s*0.3, s*0.9, 0);
+      upper.rotation.z = side * 0.35;
+      group.add(upper);
+      const fore = new THREE.Mesh(new THREE.CylinderGeometry(s*0.04, s*0.03, s*0.32, 5), mSkin(bp.limbs));
+      fore.position.set(side*s*0.42, s*0.6, s*0.05);
+      fore.rotation.x = -0.3;
+      group.add(fore);
+      for (let c = -1; c <= 1; c++) {
+        const claw = new THREE.Mesh(new THREE.ConeGeometry(s*0.01, s*0.08, 3), mS(0x221111, 0.3));
+        claw.position.set(side*s*0.42 + c*s*0.02, s*0.38, s*0.12);
+        claw.rotation.x = -0.6;
+        group.add(claw);
+      }
+    }
+    // Bat wings - larger, more membrane detail
+    for (const side of [-1, 1]) {
+      // Wing bones - 3 segments
+      const bone1 = new THREE.Mesh(new THREE.CylinderGeometry(s*0.02, s*0.015, s*0.65, 4), mS(0x331133, 0.6));
+      bone1.position.set(side*s*0.5, s*1.05, -s*0.08);
       bone1.rotation.z = side * 1.2;
       group.add(bone1);
-      const bone2 = new THREE.Mesh(new THREE.CylinderGeometry(s*0.015, s*0.01, s*0.5, 4), mL(0x331133));
-      bone2.position.set(side*s*0.65, s*0.85, -s*0.08);
-      bone2.rotation.z = side * 0.8;
+      const bone2 = new THREE.Mesh(new THREE.CylinderGeometry(s*0.015, s*0.01, s*0.55, 4), mS(0x331133, 0.6));
+      bone2.position.set(side*s*0.7, s*0.9, -s*0.08);
+      bone2.rotation.z = side * 0.7;
       group.add(bone2);
-      // Wing membrane - translucent
+      const bone3 = new THREE.Mesh(new THREE.CylinderGeometry(s*0.01, s*0.007, s*0.4, 3), mS(0x331133, 0.6));
+      bone3.position.set(side*s*0.55, s*0.75, -s*0.08);
+      bone3.rotation.z = side * 1.0;
+      group.add(bone3);
+      // Wing membrane - translucent with vein pattern
       const wingShape = new THREE.Shape();
       wingShape.moveTo(0, 0);
-      wingShape.lineTo(side*s*0.7, s*0.3);
-      wingShape.lineTo(side*s*0.8, 0);
-      wingShape.lineTo(side*s*0.6, -s*0.2);
+      wingShape.lineTo(side*s*0.75, s*0.35);
+      wingShape.lineTo(side*s*0.9, s*0.05);
+      wingShape.lineTo(side*s*0.7, -s*0.15);
+      wingShape.lineTo(side*s*0.4, -s*0.2);
       wingShape.lineTo(0, -s*0.15);
       const wingGeo = new THREE.ShapeGeometry(wingShape);
-      const wingMat = new THREE.MeshLambertMaterial({ color: 0x441144, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+      const wingMat = new THREE.MeshStandardMaterial({
+        color: 0x441144, transparent: true, opacity: 0.45,
+        side: THREE.DoubleSide, roughness: 0.6, emissive: 0x220022, emissiveIntensity: 0.15
+      });
       const wing = new THREE.Mesh(wingGeo, wingMat);
-      wing.position.set(0, s*0.95, -s*0.1);
+      wing.position.set(0, s*0.98, -s*0.1);
       wing.rotation.y = side > 0 ? -0.15 : 0.15;
       group.add(wing);
     }
 
   } else if (def === ENEMY_DEFS.kapre) {
-    // Massive tree giant - bark-textured skin, moss, cigar, leaf beard
+    // Massive tree giant - ancient, terrifying nature spirit
     const mBark = new THREE.MeshStandardMaterial({ color: 0x3D2B1F, roughness: 0.95, metalness: 0 });
-    const mMoss = new THREE.MeshLambertMaterial({ color: 0x2a4a20 });
-    // Massive torso - barrel-shaped
+    const mDarkBark = new THREE.MeshStandardMaterial({ color: 0x2D1B0F, roughness: 0.9, metalness: 0 });
+    const mMoss = new THREE.MeshStandardMaterial({ color: 0x2a4a20, roughness: 0.8 });
+    // Massive torso - barrel-shaped with deep bark cracks
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(s*0.3, s*0.25, s*0.55, 8), mBark);
     torso.position.y = s*0.8;
     group.add(torso);
+    // Deep bark crack lines
+    for (let i = 0; i < 5; i++) {
+      const crack = new THREE.Mesh(new THREE.BoxGeometry(s*0.005, s*0.15, s*0.01), mS(0x1a0a00, 0.3));
+      crack.position.set((Math.random()-0.5)*s*0.25, s*(0.65+Math.random()*0.25), s*0.13);
+      crack.rotation.z = (Math.random()-0.5)*0.5;
+      group.add(crack);
+    }
     // Bark texture rings on torso
-    for (let i = 0; i < 3; i++) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(s*0.28, s*0.02, 4, 8), mL(0x2D1B0F));
-      ring.position.y = s*(0.65 + i*0.15);
+    for (let i = 0; i < 4; i++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(s*0.28, s*0.018, 4, 10), mDarkBark);
+      ring.position.y = s*(0.62 + i*0.12);
       ring.rotation.x = Math.PI/2;
       group.add(ring);
     }
-    // Moss patches on shoulders
+    // Moss patches - more organic looking
     for (const side of [-1, 1]) {
-      const moss = new THREE.Mesh(new THREE.SphereGeometry(s*0.12, 5, 4), mMoss);
+      const moss = new THREE.Mesh(new THREE.SphereGeometry(s*0.14, 6, 5), mMoss);
       moss.position.set(side*s*0.28, s*1.05, s*0.05);
-      moss.scale.set(1.5, 0.5, 1);
+      moss.scale.set(1.5, 0.4, 1.2);
       group.add(moss);
     }
-    // Broad shoulders
-    const shoulders = new THREE.Mesh(new THREE.BoxGeometry(s*0.7, s*0.12, s*0.35), mBark);
-    shoulders.position.y = s*1.08;
+    // Extra moss on back
+    const backMoss = new THREE.Mesh(new THREE.SphereGeometry(s*0.15, 5, 4), mMoss);
+    backMoss.position.set(0, s*0.85, -s*0.15);
+    backMoss.scale.set(1.5, 0.5, 1);
+    group.add(backMoss);
+    // Broad shoulders - massive
+    const shoulders = new THREE.Mesh(new THREE.BoxGeometry(s*0.75, s*0.14, s*0.38), mBark);
+    shoulders.position.y = s*1.1;
     group.add(shoulders);
-    // Head - craggy, wide with deep-set eyes
-    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.22, 6, 6), mBark);
-    head.position.set(0, s*1.3, s*0.05); head.scale.set(1.2, 1, 0.9);
+    // Head - craggy, ancient face carved from wood
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.24, 8, 8), mBark);
+    head.position.set(0, s*1.32, s*0.05); head.scale.set(1.2, 1.05, 0.9);
     group.add(head);
-    // Heavy brow ridge
-    const brow = new THREE.Mesh(new THREE.BoxGeometry(s*0.35, s*0.06, s*0.15), mL(0x2D1B0F));
-    brow.position.set(0, s*1.35, s*0.12);
+    // Heavy brow ridge with wood grain
+    const brow = new THREE.Mesh(new THREE.BoxGeometry(s*0.38, s*0.07, s*0.16), mDarkBark);
+    brow.position.set(0, s*1.38, s*0.12);
     group.add(brow);
-    // Deep-set glowing amber eyes
+    // Deep-set glowing ember eyes
     for (const side of [-1, 1]) {
-      const socket = new THREE.Mesh(new THREE.SphereGeometry(s*0.05, 4, 4), mL(0x1a0a00));
-      socket.position.set(side*s*0.1, s*1.3, s*0.17);
+      const socket = new THREE.Mesh(new THREE.SphereGeometry(s*0.055, 5, 5), mS(0x0a0500, 0.2));
+      socket.position.set(side*s*0.1, s*1.32, s*0.18);
       group.add(socket);
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.035, 4, 4), mB(0xff8800));
-      eye.position.set(side*s*0.1, s*1.3, s*0.2);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 6, 6), mGlow(0xff6600, 0xff4400, 1.0));
+      eye.position.set(side*s*0.1, s*1.32, s*0.21);
       group.add(eye);
     }
     // Flat wide nose
-    const nose = new THREE.Mesh(new THREE.BoxGeometry(s*0.08, s*0.06, s*0.06), mL(0x3D2B1F));
-    nose.position.set(0, s*1.25, s*0.2);
+    const nose = new THREE.Mesh(new THREE.BoxGeometry(s*0.1, s*0.07, s*0.07), mBark);
+    nose.position.set(0, s*1.27, s*0.2);
     group.add(nose);
-    // Leaf/vine beard
-    for (let i = 0; i < 6; i++) {
-      const vine = new THREE.Mesh(new THREE.BoxGeometry(s*0.025, s*(0.1+Math.random()*0.1), s*0.015), mMoss);
-      vine.position.set((i-2.5)*s*0.05, s*1.12, s*0.18);
+    // Grim mouth
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(s*0.15, s*0.04, s*0.04), mS(0x1a0500, 0.3));
+    mouth.position.set(0, s*1.18, s*0.2);
+    group.add(mouth);
+    // Vine beard - longer, thicker
+    for (let i = 0; i < 8; i++) {
+      const vine = new THREE.Mesh(
+        new THREE.CylinderGeometry(s*0.012, s*0.006, s*(0.12+Math.random()*0.12), 3), mMoss);
+      vine.position.set((i-3.5)*s*0.04, s*1.1, s*0.18);
       vine.rotation.z = (Math.random()-0.5)*0.3;
+      vine.rotation.x = 0.2;
       group.add(vine);
     }
-    // Cigar - large, with ember glow
-    const cigarBody = new THREE.Mesh(new THREE.CylinderGeometry(s*0.025, s*0.03, s*0.25, 6), mL(0x8B7355));
-    cigarBody.position.set(s*0.12, s*1.2, s*0.22);
+    // Cigar - large, with glowing ember and smoke trail
+    const cigarBody = new THREE.Mesh(new THREE.CylinderGeometry(s*0.03, s*0.035, s*0.28, 6), mS(0x8B7355, 0.7));
+    cigarBody.position.set(s*0.12, s*1.22, s*0.24);
     cigarBody.rotation.z = 0.5; cigarBody.rotation.x = -0.2;
     group.add(cigarBody);
-    const ember = new THREE.Mesh(new THREE.SphereGeometry(s*0.03, 4, 4), mB(0xff4400));
-    ember.position.set(s*0.2, s*1.25, s*0.25);
+    const ember = new THREE.Mesh(new THREE.SphereGeometry(s*0.035, 5, 5), mGlow(0xff4400, 0xff2200, 1.5));
+    ember.position.set(s*0.22, s*1.28, s*0.27);
     group.add(ember);
-    // Smoke wisps (small translucent spheres)
-    for (let i = 0; i < 3; i++) {
-      const smoke = new THREE.Mesh(new THREE.SphereGeometry(s*0.03, 4, 4),
-        new THREE.MeshBasicMaterial({ color: 0x888888, transparent: true, opacity: 0.2 }));
-      smoke.position.set(s*(0.22+i*0.04), s*(1.3+i*0.06), s*0.25);
+    // Smoke trail
+    for (let i = 0; i < 4; i++) {
+      const smoke = new THREE.Mesh(new THREE.SphereGeometry(s*(0.025+i*0.01), 4, 4),
+        new THREE.MeshBasicMaterial({ color: 0x999999, transparent: true, opacity: 0.15 - i*0.03 }));
+      smoke.position.set(s*(0.24+i*0.03), s*(1.32+i*0.08), s*0.27);
       group.add(smoke);
     }
-    // Massive arms - tree-trunk thickness
+    // Massive arms - tree-trunk thickness with knot details
     for (const side of [-1, 1]) {
-      const upper = new THREE.Mesh(new THREE.CylinderGeometry(s*0.1, s*0.08, s*0.4, 6), mBark);
-      upper.position.set(side*s*0.42, s*0.85, 0);
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(s*0.11, s*0.09, s*0.42, 6), mBark);
+      upper.position.set(side*s*0.44, s*0.85, 0);
       upper.rotation.z = side * 0.15;
       group.add(upper);
-      const fore = new THREE.Mesh(new THREE.CylinderGeometry(s*0.08, s*0.07, s*0.35, 6), mBark);
-      fore.position.set(side*s*0.45, s*0.5, s*0.05);
+      // Knot on arm
+      const knot = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 4, 4), mDarkBark);
+      knot.position.set(side*s*0.44, s*0.8, s*0.08);
+      group.add(knot);
+      const fore = new THREE.Mesh(new THREE.CylinderGeometry(s*0.09, s*0.075, s*0.38, 6), mBark);
+      fore.position.set(side*s*0.47, s*0.5, s*0.05);
       group.add(fore);
       // Large gnarled hands
-      const hand = new THREE.Mesh(new THREE.BoxGeometry(s*0.12, s*0.1, s*0.08), mL(0x4D3B2F));
-      hand.position.set(side*s*0.45, s*0.3, s*0.05);
+      const hand = new THREE.Mesh(new THREE.BoxGeometry(s*0.13, s*0.1, s*0.09), mDarkBark);
+      hand.position.set(side*s*0.47, s*0.28, s*0.05);
       group.add(hand);
       // Thick fingers
-      for (let f = 0; f < 3; f++) {
-        const finger = new THREE.Mesh(new THREE.CylinderGeometry(s*0.015, s*0.02, s*0.08, 4), mL(0x4D3B2F));
-        finger.position.set(side*s*0.45 + (f-1)*s*0.03, s*0.24, s*0.08);
+      for (let f = 0; f < 4; f++) {
+        const finger = new THREE.Mesh(new THREE.CylinderGeometry(s*0.018, s*0.022, s*0.09, 4), mDarkBark);
+        finger.position.set(side*s*0.47 + (f-1.5)*s*0.025, s*0.22, s*0.08);
         finger.rotation.x = -0.4;
         group.add(finger);
       }
     }
     // Trunk-like legs
     for (const side of [-1, 1]) {
-      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(s*0.12, s*0.1, s*0.35, 6), mBark);
-      thigh.position.set(side*s*0.15, s*0.35, 0);
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(s*0.13, s*0.11, s*0.35, 6), mBark);
+      thigh.position.set(side*s*0.16, s*0.35, 0);
       group.add(thigh);
-      const shin = new THREE.Mesh(new THREE.CylinderGeometry(s*0.1, s*0.12, s*0.3, 6), mBark);
-      shin.position.set(side*s*0.15, s*0.08, 0);
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(s*0.11, s*0.13, s*0.3, 6), mBark);
+      shin.position.set(side*s*0.16, s*0.08, 0);
       group.add(shin);
-      // Rooted feet
-      const foot = new THREE.Mesh(new THREE.BoxGeometry(s*0.15, s*0.05, s*0.2), mL(0x2D1B0F));
-      foot.position.set(side*s*0.15, s*0.01, s*0.04);
+      // Rooted feet - spreading out
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(s*0.18, s*0.05, s*0.22), mDarkBark);
+      foot.position.set(side*s*0.16, s*0.01, s*0.04);
       group.add(foot);
+      // Root tendrils from feet
+      for (let r = 0; r < 2; r++) {
+        const root = new THREE.Mesh(new THREE.CylinderGeometry(s*0.012, s*0.005, s*0.12, 3), mDarkBark);
+        root.position.set(side*s*0.16 + (r-0.5)*s*0.06, s*0.01, s*0.12);
+        root.rotation.x = -0.8;
+        group.add(root);
+      }
     }
-    // Vines hanging from arms
+    // Vines hanging from body
     for (const side of [-1, 1]) {
-      for (let v = 0; v < 2; v++) {
-        const vine = new THREE.Mesh(new THREE.CylinderGeometry(s*0.008, s*0.005, s*0.15, 3), mMoss);
-        vine.position.set(side*s*0.42, s*0.6 - v*0.15, -s*0.05);
+      for (let v = 0; v < 3; v++) {
+        const vine = new THREE.Mesh(new THREE.CylinderGeometry(s*0.008, s*0.004, s*(0.12+Math.random()*0.08), 3), mMoss);
+        vine.position.set(side*s*(0.35+v*0.05), s*(0.7 - v*0.12), -s*0.08);
         group.add(vine);
       }
     }
 
   } else if (def === ENEMY_DEFS.diwata) {
-    // Corrupted nature spirit - ethereal, flowing robes, crown of thorns, magical aura
-    const mEther = (c, em) => new THREE.MeshStandardMaterial({ color: c, metalness: 0.4, roughness: 0.3, emissive: em, emissiveIntensity: 0.4, transparent: true, opacity: 0.85 });
-    // Flowing robe body - tapers at top
-    const robe = new THREE.Mesh(new THREE.CylinderGeometry(s*0.15, s*0.35, s*0.7, 8), mEther(0x330066, 0x220044));
+    // Corrupted nature spirit - ethereal horror, reality-bending
+    const mEther = (c, em) => new THREE.MeshStandardMaterial({
+      color: c, metalness: 0.5, roughness: 0.2, emissive: em, emissiveIntensity: 0.5,
+      transparent: true, opacity: 0.85
+    });
+    const mVoid = (c) => new THREE.MeshStandardMaterial({
+      color: c, metalness: 0.6, roughness: 0.15, emissive: c, emissiveIntensity: 0.3,
+      transparent: true, opacity: 0.4
+    });
+    // Flowing robe body - tapers, multiple ghostly layers
+    const robe = new THREE.Mesh(new THREE.CylinderGeometry(s*0.15, s*0.38, s*0.75, 10), mEther(0x330066, 0x220044));
     robe.position.y = s*0.45;
     group.add(robe);
-    // Robe layers - overlapping translucent
-    const robeOuter = new THREE.Mesh(new THREE.CylinderGeometry(s*0.18, s*0.4, s*0.65, 8),
-      new THREE.MeshLambertMaterial({ color: 0x440088, transparent: true, opacity: 0.35 }));
+    // Ghostly outer layer
+    const robeOuter = new THREE.Mesh(new THREE.CylinderGeometry(s*0.2, s*0.45, s*0.7, 10), mVoid(0x440088));
     robeOuter.position.y = s*0.47;
     group.add(robeOuter);
-    // Upper body
-    const chest = new THREE.Mesh(new THREE.BoxGeometry(s*0.35, s*0.3, s*0.2), mEther(0x440077, 0x330055));
+    // Third wispy layer
+    const robeWisp = new THREE.Mesh(new THREE.CylinderGeometry(s*0.22, s*0.5, s*0.6, 8),
+      new THREE.MeshBasicMaterial({ color: 0x330055, transparent: true, opacity: 0.12 }));
+    robeWisp.position.y = s*0.5;
+    group.add(robeWisp);
+    // Upper body - elegant but corrupted
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(s*0.36, s*0.32, s*0.2), mEther(0x440077, 0x330055));
     chest.position.y = s*0.95;
     group.add(chest);
-    // Corrupted tendrils from waist
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * Math.PI * 2;
-      const tendril = new THREE.Mesh(new THREE.CylinderGeometry(s*0.012, s*0.005, s*0.2, 4),
-        new THREE.MeshBasicMaterial({ color: 0x660099, transparent: true, opacity: 0.4 }));
-      tendril.position.set(Math.cos(angle)*s*0.3, s*0.2, Math.sin(angle)*s*0.3);
-      tendril.rotation.x = Math.cos(angle) * 0.5;
-      tendril.rotation.z = Math.sin(angle) * 0.5;
-      group.add(tendril);
+    // Corrupted veins across chest
+    for (let i = 0; i < 4; i++) {
+      const vein = new THREE.Mesh(new THREE.CylinderGeometry(s*0.005, s*0.003, s*0.15, 3),
+        mGlow(0xaa00ff, 0x8800cc, 0.8));
+      vein.position.set((Math.random()-0.5)*s*0.2, s*0.9+Math.random()*s*0.15, s*0.1);
+      vein.rotation.z = (Math.random()-0.5)*1.0;
+      group.add(vein);
     }
-    // Head - elegant but corrupted
-    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.18, 8, 8), mEther(0x997788, 0x440044));
-    head.position.set(0, s*1.2, 0); head.scale.set(1, 1.15, 0.9);
-    group.add(head);
-    // Crown of thorns / corrupted vines
+    // Corrupted tendrils from waist - more numerous, animated-looking
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
-      const thorn = new THREE.Mesh(new THREE.ConeGeometry(s*0.015, s*0.08, 3), mL(0x2a0a2a));
-      thorn.position.set(Math.cos(angle)*s*0.18, s*1.32, Math.sin(angle)*s*0.18);
-      thorn.rotation.x = Math.cos(angle) * 0.4;
-      thorn.rotation.z = -Math.sin(angle) * 0.4;
-      group.add(thorn);
+      const len = s*(0.15 + Math.random()*0.1);
+      const tendril = new THREE.Mesh(new THREE.CylinderGeometry(s*0.012, s*0.004, len, 4),
+        mGlow(0x660099, 0x440066, 0.6));
+      tendril.position.set(Math.cos(angle)*s*0.32, s*0.18, Math.sin(angle)*s*0.32);
+      tendril.rotation.x = Math.cos(angle) * 0.6;
+      tendril.rotation.z = Math.sin(angle) * 0.6;
+      group.add(tendril);
     }
-    // Crown ring
-    const crown = new THREE.Mesh(new THREE.TorusGeometry(s*0.18, s*0.015, 4, 12), mL(0x3a1a3a));
-    crown.position.y = s*1.3;
+    // Head - hauntingly beautiful, corrupted
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.19, 10, 10), mEther(0x997788, 0x440044));
+    head.position.set(0, s*1.22, 0); head.scale.set(1, 1.15, 0.9);
+    group.add(head);
+    // Crown of thorns - more elaborate
+    const crown = new THREE.Mesh(new THREE.TorusGeometry(s*0.2, s*0.018, 6, 14), mS(0x2a0a2a, 0.6, 0.3));
+    crown.position.y = s*1.34;
     crown.rotation.x = Math.PI / 2;
     group.add(crown);
-    // Glowing purple eyes
+    for (let i = 0; i < 10; i++) {
+      const angle = (i / 10) * Math.PI * 2;
+      const thorn = new THREE.Mesh(new THREE.ConeGeometry(s*0.012, s*0.1, 3), mS(0x2a0a2a, 0.5, 0.2));
+      thorn.position.set(Math.cos(angle)*s*0.2, s*1.36, Math.sin(angle)*s*0.2);
+      thorn.rotation.x = Math.cos(angle) * 0.5;
+      thorn.rotation.z = -Math.sin(angle) * 0.5;
+      group.add(thorn);
+    }
+    // Glowing eyes - intense, otherworldly
     for (const side of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.05, 6, 6),
-        new THREE.MeshBasicMaterial({ color: 0xff00ff }));
-      eye.position.set(side*s*0.07, s*1.22, s*0.14);
+      // Eye glow halo
+      const halo = new THREE.Mesh(new THREE.SphereGeometry(s*0.06, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.25 }));
+      halo.position.set(side*s*0.07, s*1.24, s*0.14);
+      group.add(halo);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 8, 8), mGlow(0xff00ff, 0xff00ff, 1.5));
+      eye.position.set(side*s*0.07, s*1.24, s*0.15);
       group.add(eye);
     }
-    // Dark lips
-    const lips = new THREE.Mesh(new THREE.BoxGeometry(s*0.08, s*0.02, s*0.03), mL(0x330033));
-    lips.position.set(0, s*1.12, s*0.16);
+    // Dark elegant lips
+    const lips = new THREE.Mesh(new THREE.BoxGeometry(s*0.08, s*0.015, s*0.03), mS(0x440033, 0.3));
+    lips.position.set(0, s*1.13, s*0.16);
     group.add(lips);
-    // Long flowing hair
-    for (let i = 0; i < 10; i++) {
-      const strand = new THREE.Mesh(new THREE.BoxGeometry(s*0.02, s*(0.3+Math.random()*0.2), s*0.01),
-        new THREE.MeshLambertMaterial({ color: 0x1a001a, transparent: true, opacity: 0.7 }));
-      strand.position.set((i-4.5)*s*0.04, s*1.1, -s*0.12);
-      strand.rotation.x = 0.3 + Math.random()*0.3;
-      strand.rotation.z = (Math.random()-0.5)*0.2;
+    // Long flowing hair - ethereal, floating
+    for (let i = 0; i < 14; i++) {
+      const strand = new THREE.Mesh(
+        new THREE.CylinderGeometry(s*0.008, s*0.004, s*(0.3+Math.random()*0.25), 3),
+        new THREE.MeshStandardMaterial({
+          color: 0x1a001a, transparent: true, opacity: 0.6,
+          emissive: 0x220022, emissiveIntensity: 0.2
+        }));
+      strand.position.set((i-6.5)*s*0.03, s*1.12, -s*0.12);
+      strand.rotation.x = 0.3 + Math.random()*0.4;
+      strand.rotation.z = (Math.random()-0.5)*0.25;
       group.add(strand);
     }
-    // Ethereal arms - slender, glowing
+    // Ethereal arms - slender, glowing, longer
     for (const side of [-1, 1]) {
-      const upper = new THREE.Mesh(new THREE.BoxGeometry(s*0.07, s*0.3, s*0.07), mEther(0x550088, 0x330055));
+      const upper = new THREE.Mesh(new THREE.CylinderGeometry(s*0.035, s*0.03, s*0.32, 5),
+        mEther(0x550088, 0x330055));
       upper.position.set(side*s*0.25, s*0.85, 0);
-      upper.rotation.z = side * 0.2;
+      upper.rotation.z = side * 0.25;
       group.add(upper);
-      const fore = new THREE.Mesh(new THREE.BoxGeometry(s*0.06, s*0.25, s*0.06), mEther(0x550088, 0x330055));
-      fore.position.set(side*s*0.3, s*0.6, s*0.05);
+      const fore = new THREE.Mesh(new THREE.CylinderGeometry(s*0.03, s*0.025, s*0.28, 5),
+        mEther(0x550088, 0x330055));
+      fore.position.set(side*s*0.32, s*0.58, s*0.05);
       fore.rotation.x = side > 0 ? -0.4 : -0.2;
       group.add(fore);
-      // Glowing fingertips
-      const hand = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 4, 4),
-        new THREE.MeshBasicMaterial({ color: 0xaa44ff, transparent: true, opacity: 0.6 }));
-      hand.position.set(side*s*0.3, s*0.45, s*0.1);
+      // Glowing fingertips - magical energy
+      const hand = new THREE.Mesh(new THREE.SphereGeometry(s*0.035, 5, 5),
+        mGlow(0xcc44ff, 0xaa22ff, 1.0));
+      hand.position.set(side*s*0.32, s*0.42, s*0.1);
       group.add(hand);
+      // Energy trail from fingers
+      const trail = new THREE.Mesh(new THREE.CylinderGeometry(s*0.02, s*0.005, s*0.1, 3),
+        new THREE.MeshBasicMaterial({ color: 0xaa44ff, transparent: true, opacity: 0.2 }));
+      trail.position.set(side*s*0.32, s*0.35, s*0.12);
+      group.add(trail);
     }
-    // Floating orbs orbiting the body
-    for (let i = 0; i < 4; i++) {
-      const angle = (i / 4) * Math.PI * 2;
-      const orb = new THREE.Mesh(new THREE.SphereGeometry(s*0.04, 6, 6),
-        new THREE.MeshBasicMaterial({ color: 0xcc66ff, transparent: true, opacity: 0.5 }));
-      orb.position.set(Math.cos(angle)*s*0.5, s*0.8 + Math.sin(angle*2)*s*0.1, Math.sin(angle)*s*0.5);
+    // Floating orbs - more, with energy connections
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const orb = new THREE.Mesh(new THREE.SphereGeometry(s*0.035, 8, 8),
+        mGlow(0xcc66ff, 0xaa44ff, 0.8));
+      orb.position.set(Math.cos(angle)*s*0.55, s*0.8 + Math.sin(angle*2)*s*0.12, Math.sin(angle)*s*0.55);
       group.add(orb);
     }
-    // Inner aura glow
-    const innerAura = new THREE.Mesh(new THREE.SphereGeometry(s*0.5, 8, 8),
-      new THREE.MeshBasicMaterial({ color: 0x6600aa, transparent: true, opacity: 0.1 }));
+    // Inner aura - multi-layered
+    const innerAura = new THREE.Mesh(new THREE.SphereGeometry(s*0.5, 10, 10),
+      new THREE.MeshBasicMaterial({ color: 0x6600aa, transparent: true, opacity: 0.08 }));
     innerAura.position.y = s*0.8;
     group.add(innerAura);
+    const outerAura = new THREE.Mesh(new THREE.SphereGeometry(s*0.7, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0x440066, transparent: true, opacity: 0.04 }));
+    outerAura.position.y = s*0.8;
+    group.add(outerAura);
 
   } else {
     // Generic fallback
-    const body = new THREE.Mesh(new THREE.BoxGeometry(s*0.5, s*0.6, s*0.3), mL(bp.body));
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(s*0.2, s*0.18, s*0.6, 6), mSkin(bp.body));
     body.position.y = s*0.7;
     group.add(body);
-    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.22, 6, 6), mL(bp.head));
+    const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.22, 8, 8), mSkin(bp.head));
     head.position.y = s*1.1;
     group.add(head);
     for (const side of [-1, 1]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.06, 4, 4), mB(0xff2200));
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.06, 5, 5), mGlow(0xff2200, 0xff0000, 0.8));
       eye.position.set(side*s*0.09, s*1.13, s*0.18);
       group.add(eye);
     }
     for (const side of [-1, 1]) {
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(s*0.14, s*0.45, s*0.14), mL(bp.limbs));
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(s*0.06, s*0.05, s*0.45, 5), mSkin(bp.limbs));
       arm.position.set(side*s*0.35, s*0.65, 0);
       group.add(arm);
     }
     for (const side of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(s*0.16, s*0.4, s*0.16), mL(bp.limbs));
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(s*0.07, s*0.06, s*0.4, 5), mSkin(bp.limbs));
       leg.position.set(side*s*0.15, s*0.2, 0);
       group.add(leg);
     }
@@ -619,18 +866,39 @@ function createEnemyModel(def) {
   label.userData.texture = labelTex;
   group.add(label);
 
-  // Kapre cigar light
+  // Eye glow light for all enemies
+  if (def === ENEMY_DEFS.aswang || def === ENEMY_DEFS.manananggal) {
+    const eyeLight = new THREE.PointLight(0xff0000, 0.4, 3);
+    eyeLight.position.set(0, s * 1.0, s * 0.25);
+    group.add(eyeLight);
+  } else if (def === ENEMY_DEFS.infected || def === ENEMY_DEFS.tiyanak) {
+    const eyeLight = new THREE.PointLight(0xff6600, 0.25, 2);
+    eyeLight.position.set(0, s * 0.7, s * 0.2);
+    group.add(eyeLight);
+  }
+
+  // Kapre cigar light + eye glow
   if (def === ENEMY_DEFS.kapre) {
-    const cigarLight = new THREE.PointLight(0xff4400, 0.5, 4);
-    cigarLight.position.set(s * 0.2, s * 1.25, s * 0.25);
+    const cigarLight = new THREE.PointLight(0xff4400, 0.6, 5);
+    cigarLight.position.set(s * 0.22, s * 1.28, s * 0.27);
     group.add(cigarLight);
+    const eyeLight = new THREE.PointLight(0xff6600, 0.3, 4);
+    eyeLight.position.set(0, s * 1.32, s * 0.2);
+    group.add(eyeLight);
   }
 
   // Diwata aura light
   if (def === ENEMY_DEFS.diwata) {
-    const auraLight = new THREE.PointLight(0x8800ff, 1.5, 12);
+    const auraLight = new THREE.PointLight(0x8800ff, 2.0, 14);
     auraLight.position.y = s * 0.8;
     group.add(auraLight);
+  }
+
+  // Tikbalang eye glow
+  if (def === ENEMY_DEFS.tikbalang) {
+    const eyeLight = new THREE.PointLight(0xffcc00, 0.4, 4);
+    eyeLight.position.set(0, s * 1.24, s * 0.23);
+    group.add(eyeLight);
   }
 
   return group;
@@ -763,6 +1031,14 @@ export class EnemyManager {
       const dz = playerPos.z - e.model.position.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
 
+      // Idle animation - breathing, head tilt, menacing sway
+      if (e.state === 'idle') {
+        const breathe = Math.sin(e.animTime * 1.5) * 0.02;
+        e.model.position.y = getTerrainHeightFast(e.model.position.x, e.model.position.z) + breathe;
+        // Slow menacing sway
+        e.model.rotation.y += Math.sin(e.animTime * 0.5) * 0.003;
+      }
+
       // State machine
       if (dist < e.alertRange && e.state === 'idle') {
         e.state = 'chase';
@@ -814,7 +1090,7 @@ export class EnemyManager {
 
         // Walk animation
         const walkBob = Math.sin(e.animTime * e.speed * 2) * 0.1;
-        const s = e.def.scale || 1;
+        const s = e.def.size || 1;
         e.model.children.forEach((c, ci) => {
           // Swing limbs that are positioned at the sides of the body
           if (c.isMesh && Math.abs(c.position.x) > s * 0.2 && c.position.y > s * 0.3) {

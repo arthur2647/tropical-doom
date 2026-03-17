@@ -245,7 +245,21 @@ class Game {
       { x: -30, z: 0, name: 'a cliff overlook' },
       { x: 30, z: -20, name: 'the coastal path' },
     ];
-    const spawn = spawnPoints[Math.floor(Math.random() * spawnPoints.length)];
+    // Shuffle and find first spawn not blocked by colliders
+    const shuffled = spawnPoints.sort(() => Math.random() - 0.5);
+    let spawn = shuffled[0];
+    for (const sp of shuffled) {
+      const testPos = new THREE.Vector3(sp.x, 1.7, sp.z);
+      const box = new THREE.Box3().setFromCenterAndSize(
+        new THREE.Vector3(testPos.x, testPos.y - 0.85, testPos.z),
+        new THREE.Vector3(0.6, 1.7, 0.6)
+      );
+      let blocked = false;
+      for (const c of this.colliders) {
+        if (box.intersectsBox(c)) { blocked = true; break; }
+      }
+      if (!blocked) { spawn = sp; break; }
+    }
     this.spawnName = spawn.name;
     const spawnY = 1.7;
     this.camera.position.set(spawn.x, spawnY, spawn.z);
